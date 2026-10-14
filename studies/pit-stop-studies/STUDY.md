@@ -120,3 +120,22 @@ Tunable constants: `PULL`, `DROP` (line 311), `LIFT`, `MIN_DIST`, `MIN_V` (429),
   - Study 2: `prev.addEventListener('change', ...)` calls `unlock()` / `lock()` (~line 499-502).
   - Study 3: same pattern (~line 621-624).
 - **Reset:** each study's `resetAll`/`reset` already returns to its locked or initial state; a sequence-level reset should call all three and uncheck the checkboxes.
+
+## 8. Behavior Controls (Study 1: Fit)
+
+A collapsible **Behavior Controls** panel under the Study 1 stage tunes the study's real parameters live. Defaults equal the original values, so the study behaves exactly as before until a control is moved.
+
+| Control | Parameter it drives | Unit, range | Default |
+|---|---|---|---|
+| Follow lag (duration) | `LAG`, smoothing time constant in `frame()` | ms, 0-300 | 70 |
+| Snap / return duration | `--snap-ms`, `#tire.anim` transition | ms, 100-1000 | 350 |
+| Lock-in delay | `SEAT_DELAY`, the `setTimeout` in `drop()` | ms, 0-1000 | 260 |
+| Pull zone radius (distance) | `PULL` | px, 40-200 | 95 |
+| Seat bounce (amplitude) | `--seat-amp`, `@keyframes seat` | px, 0-30 | 10 |
+| Drop threshold (trigger) | `DROP` (always kept at least 5px below `PULL`) | px, 10-90 | 40 |
+| Feedback intensity | `--halo-near`, `--halo-ready`, `--halo-fill` | %, 0-100 | 100 |
+| Motion curve | `--snap-ease`: Linear, Ease In, Ease Out, Ease In-Out, Spring / Bounce | - | Ease Out (`cubic-bezier(.2,.8,.2,1)`) |
+
+- **Reset state** puts the tire back on the rack (same as the study's Reset) and keeps the current values.
+- **Restore defaults** sets every control back to the original values.
+- **Copy as prompt** copies the current values, each with its original value, as a ready-to-paste instruction for making them permanent.

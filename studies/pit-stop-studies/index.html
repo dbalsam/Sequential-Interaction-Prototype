@@ -19,14 +19,14 @@ h1,h2{font-size:20px;margin:0 0 4px;font-weight:600}
 #rack{position:absolute;left:4%;top:50%;width:26%;height:150px;transform:translateY(-50%);border:2px dashed var(--line)}
 #axle{position:absolute;top:0;bottom:0;width:0;border-left:2px solid var(--line);left:66%}
 #halo{position:absolute;width:150px;height:150px;border-radius:50%;border:2px dashed var(--line);transform:translate(-50%,-50%);transition:border-width .12s,border-color .12s,background .12s}
-#halo[data-level="near"]{border-style:solid;border-width:3px;border-color:var(--mid)}
-#halo[data-level="ready"]{border-style:solid;border-width:5px;border-color:var(--fg)}
-#halo[data-level="fitted"]{border-style:solid;border-width:5px;border-color:var(--fg);background:var(--line)}
+#halo[data-level="near"]{border-style:solid;border-width:var(--halo-near,3px);border-color:var(--mid)}
+#halo[data-level="ready"]{border-style:solid;border-width:var(--halo-ready,5px);border-color:var(--fg)}
+#halo[data-level="fitted"]{border-style:solid;border-width:var(--halo-ready,5px);border-color:var(--fg);background:color-mix(in srgb,var(--line) var(--halo-fill,100%),transparent)}
 #socket{position:absolute;width:30px;height:30px;border-radius:50%;border:2px dashed var(--mid);transform:translate(-50%,-50%)}
 #tire{position:absolute;left:-44px;top:-44px;width:88px;height:88px;cursor:grab;touch-action:none;outline-offset:4px}
 #tire:focus-visible{outline:3px solid var(--fg)}
 #tire.grab{cursor:grabbing}
-#tire.anim{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+#tire.anim{transition:transform var(--snap-ms,350ms) var(--snap-ease,cubic-bezier(.2,.8,.2,1))}
 #tire.locked{cursor:default}
 #tire svg{width:100%;height:100%;display:block}
 .t-body{fill:var(--solid);stroke:var(--fg);stroke-width:2}
@@ -53,10 +53,23 @@ dd{margin:0}
 @media (max-width:480px){dl{grid-template-columns:1fr;gap:2px}dd{margin-bottom:10px}}
 @media (prefers-reduced-motion:reduce){#tire.anim{transition-duration:.01s}}
 #tire.seat svg{animation:seat .4s .12s cubic-bezier(.3,0,.4,1) both}
-@keyframes seat{0%{transform:translateY(-10px) scale(1.07)}45%{transform:translateY(4px) scale(.96)}70%{transform:translateY(-1.5px) scale(1.01)}100%{transform:none}}
+@keyframes seat{0%{transform:translateY(calc(var(--seat-amp,10) * -1px)) scale(calc(1 + var(--seat-amp,10) * .007))}45%{transform:translateY(calc(var(--seat-amp,10) * .4px)) scale(calc(1 - var(--seat-amp,10) * .004))}70%{transform:translateY(calc(var(--seat-amp,10) * -.15px)) scale(calc(1 + var(--seat-amp,10) * .001))}100%{transform:none}}
 #tire.locked .t-check{display:block;animation:fadein .15s .45s both}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){#tire.seat svg{animation:none}}
+/* Behavior Controls panel (Study 1) */
+.controls{margin-top:18px;border:1px solid var(--line);padding:12px 14px}
+.controls summary{cursor:pointer;font-weight:600}
+.controls .hint{color:var(--mid);font-size:13px;margin:8px 0 4px}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+.ctl label{font-weight:600}
+.ctl .unit{color:var(--mid);font-size:13px;grid-column:1/-1}
+.ctl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--solid)}
+.ctl output{font-variant-numeric:tabular-nums;font-weight:600}
+.ctl select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--fg);padding:4px 8px;grid-column:1/-1;margin-top:4px}
+.ctl-actions{display:flex;flex-wrap:wrap;gap:10px}
+.ctl-actions button{margin-top:12px}
+#copyMsg{color:var(--mid);font-size:13px;min-height:1.4em;margin:8px 0 0}
 
 
 :root{--bg:#ededed;--fg:#161616;--mid:#808080;--line:#b0b0b0;--soft:#dedede;--solid:#2a2a2a;--onsolid:#f2f2f2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -206,6 +219,47 @@ dd{margin:0}
     </div>
   </section>
 
+  <details class="controls" id="controls">
+    <summary>Behavior Controls</summary>
+    <p class="hint">Tune the live parameters of this study. Changes apply to the next drag.</p>
+    <div class="ctl"><label for="c-lag">Follow lag (duration)</label><output id="o-lag" for="c-lag"></output>
+      <span class="unit">How far the tire trails your hand, as a smoothing time constant. ms, 0 (glued to the pointer) to 300 (very heavy). Default 70.</span>
+      <input type="range" id="c-lag" data-k="lag" min="0" max="300" step="5"></div>
+    <div class="ctl"><label for="c-snap">Snap / return duration</label><output id="o-snap" for="c-snap"></output>
+      <span class="unit">Time for the tire to snap onto the hub or fall back to the rack. ms, 100 to 1000. Default 350.</span>
+      <input type="range" id="c-snap" data-k="snap" min="100" max="1000" step="10"></div>
+    <div class="ctl"><label for="c-delay">Lock-in delay</label><output id="o-delay" for="c-delay"></output>
+      <span class="unit">Pause between the wheel seating and the ring filling, check showing and Jack chip opening. ms, 0 to 1000. Default 260.</span>
+      <input type="range" id="c-delay" data-k="delay" min="0" max="1000" step="10"></div>
+    <div class="ctl"><label for="c-pull">Pull zone radius (distance)</label><output id="o-pull" for="c-pull"></output>
+      <span class="unit">Distance from the hub where it starts drawing the tire in and the ring thickens. px, 40 to 200. Default 95.</span>
+      <input type="range" id="c-pull" data-k="pull" min="40" max="200" step="1"></div>
+    <div class="ctl"><label for="c-amp">Seat bounce (amplitude)</label><output id="o-amp" for="c-amp"></output>
+      <span class="unit">Height of the drop-and-bounce as the wheel lands on the studs. px, 0 (no bounce) to 30. Default 10.</span>
+      <input type="range" id="c-amp" data-k="amp" min="0" max="30" step="1"></div>
+    <div class="ctl"><label for="c-drop">Drop threshold (trigger)</label><output id="o-drop" for="c-drop"></output>
+      <span class="unit">Release within this distance of the hub to fit the wheel; farther and it falls back. px, 10 to 90, always kept below the pull zone. Default 40.</span>
+      <input type="range" id="c-drop" data-k="drop" min="10" max="90" step="1"></div>
+    <div class="ctl"><label for="c-fx">Feedback intensity</label><output id="o-fx" for="c-fx"></output>
+      <span class="unit">Strength of the ring feedback: ring thickness near and lined up, and the fill when fitted. %, 0 (ring stays thin and dashed) to 100. Default 100.</span>
+      <input type="range" id="c-fx" data-k="fx" min="0" max="100" step="5"></div>
+    <div class="ctl"><label for="c-ease">Motion curve</label><span></span>
+      <span class="unit">Easing for the snap onto the hub and the return to the rack. Default Ease Out (the original curve).</span>
+      <select id="c-ease" data-k="ease">
+        <option value="linear">Linear</option>
+        <option value="in">Ease In</option>
+        <option value="out">Ease Out</option>
+        <option value="inout">Ease In-Out</option>
+        <option value="spring">Spring / Bounce</option>
+      </select></div>
+    <div class="ctl-actions">
+      <button class="plain" id="c-resetState">Reset state</button>
+      <button class="plain" id="c-defaults">Restore defaults</button>
+      <button class="plain" id="c-copy">Copy as prompt</button>
+    </div>
+    <p id="copyMsg" aria-live="polite"></p>
+  </details>
+
   <details class="spec" open>
     <summary>Interaction spec</summary>
     <dl>
@@ -308,7 +362,8 @@ const field=$('field'),tire=$('tire');
 const halo=$('halo'),socket=$('socket');
 const stateEl=$('state'),gapEl=$('gap');
 const next=$('next'),nextText=$('nextText');
-const PULL=95,DROP=40;
+/* Tunables, driven by the Behavior Controls panel. Defaults are the original study values. */
+let PULL=95,DROP=40,LAG=70,SEAT_DELAY=260;
 let W=0,H=0,hx=0,hy=0,homeX=0,homeY=0,cx=0,cy=0,tx=0,ty=0,mode='rack',dragging=false,offX=0,offY=0,px=0,py=0,seatT=null;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(x,y)=>Math.hypot(x-hx,y-hy);
@@ -342,7 +397,7 @@ let last=performance.now();
 function frame(t){
   const dt=Math.min(50,t-last);last=t;
   if(mode==='carry'&&!tire.classList.contains('anim')){
-    const k=1-Math.exp(-dt/70);
+    const k=LAG>0?1-Math.exp(-dt/LAG):1;
     cx+=(tx-cx)*k;cy+=(ty-cy)*k;place();
   }
   requestAnimationFrame(frame);
@@ -362,7 +417,7 @@ function drop(){
       halo.dataset.level='fitted';
       stateEl.textContent='Fitted';gapEl.textContent='locked';
       next.dataset.open='true';nextText.textContent='Jack open';
-    },260);
+    },SEAT_DELAY);
   }else{
     mode='rack';cx=homeX;cy=homeY;tx=cx;ty=cy;place();
     halo.dataset.level='far';
@@ -416,6 +471,66 @@ tire.addEventListener('keydown',e=>{
 $('reset').addEventListener('click',reset);
 window.addEventListener('resize',layout);
 layout();
+
+/* Behavior Controls: bind each input to its real parameter. */
+const DEFAULTS={lag:70,snap:350,delay:260,pull:95,amp:10,drop:40,fx:100,ease:'out'};
+const EASES={
+  linear:{label:'Linear',css:'linear'},
+  in:{label:'Ease In',css:'cubic-bezier(.55,0,1,.45)'},
+  out:{label:'Ease Out',css:'cubic-bezier(.2,.8,.2,1)'},
+  inout:{label:'Ease In-Out',css:'cubic-bezier(.65,0,.35,1)'},
+  spring:{label:'Spring / Bounce',css:'cubic-bezier(.3,1.6,.5,1)'}
+};
+const UNITS={lag:' ms',snap:' ms',delay:' ms',pull:' px',amp:' px',drop:' px',fx:'%'};
+const inputs=[...root.querySelectorAll('#controls [data-k]')];
+const P={...DEFAULTS};
+function apply(){
+  LAG=P.lag;SEAT_DELAY=P.delay;PULL=P.pull;DROP=Math.min(P.drop,P.pull-5);P.drop=DROP;
+  const f=P.fx/100;
+  root.style.setProperty('--snap-ms',P.snap+'ms');
+  root.style.setProperty('--snap-ease',EASES[P.ease].css);
+  root.style.setProperty('--seat-amp',P.amp);
+  root.style.setProperty('--halo-near',(2+1*f)+'px');
+  root.style.setProperty('--halo-ready',(2+3*f)+'px');
+  root.style.setProperty('--halo-fill',Math.round(f*100)+'%');
+  inputs.forEach(el=>{
+    const k=el.dataset.k;el.value=P[k];
+    const o=$('o-'+k);if(o)o.textContent=P[k]+UNITS[k];
+  });
+}
+inputs.forEach(el=>el.addEventListener('input',()=>{
+  const k=el.dataset.k;P[k]=k==='ease'?el.value:Number(el.value);apply();
+}));
+$('c-resetState').addEventListener('click',reset);
+$('c-defaults').addEventListener('click',()=>{Object.assign(P,DEFAULTS);apply();});
+function promptText(){
+  return [
+    'Update Study 1 "Fit the wheel" (drag) in pit-stop-studies/index.html to use these behavior parameters:',
+    '- Follow lag (smoothing time constant while carrying): '+P.lag+' ms (was 70)',
+    '- Snap / return duration (tire onto hub or back to rack): '+P.snap+' ms (was 350)',
+    '- Motion curve for snap / return: '+EASES[P.ease].label+' = '+EASES[P.ease].css+' (was Ease Out = cubic-bezier(.2,.8,.2,1))',
+    '- Lock-in delay (seated to fitted, chip opens): '+P.delay+' ms (was 260)',
+    '- Pull zone radius PULL (hub starts drawing the tire in): '+P.pull+' px (was 95)',
+    '- Seat bounce amplitude: '+P.amp+' px (was 10)',
+    '- Drop threshold DROP (release within this distance to fit): '+P.drop+' px (was 40)',
+    '- Feedback intensity (halo ring thickness and fitted fill): '+P.fx+'% (was 100%)',
+    'Keep all other behavior the same.'
+  ].join('\n');
+}
+const copyMsg=$('copyMsg');
+$('c-copy').addEventListener('click',async()=>{
+  const text=promptText();
+  let ok=false;
+  try{await navigator.clipboard.writeText(text);ok=true;}catch(e){
+    const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');
+    ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+    try{ok=document.execCommand('copy');}catch(e2){}
+    ta.remove();
+  }
+  copyMsg.textContent=ok?'Copied. Paste it into Claude to make these values permanent.':'Copy failed. Select and copy this text:\n'+text;
+  copyMsg.style.whiteSpace='pre-wrap';
+});
+apply();
 
 })();
 (function(){
