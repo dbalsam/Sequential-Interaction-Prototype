@@ -40,7 +40,7 @@ Wireframe look: grayscale only, light and dark themes follow `prefers-color-sche
 - **States** (JS `mode`): `rack` -> `carry` -> `fitted`. Halo `data-level`: `far` -> `near` -> `ready` -> `fitted`.
 - **Actions:** pointer-drag the tire (or arrow keys to move, Enter/Space to drop).
 - **Feedback:**
-  - Tire trails the pointer (exponential smoothing, ~70ms), so it feels heavy.
+  - Tire follows the pointer with no lag by default (follow lag 0ms; originally ~70ms of exponential smoothing, adjustable in Behavior Controls).
   - Within 95px of the hub (`PULL`) the tire slows and is drawn toward the hub (power curve); halo border thickens (`near`).
   - Within 40px (`DROP`) halo goes heavy/solid (`ready`), text "Lined up with the studs. Let go."
   - `#gap` shows distance in px.
@@ -123,12 +123,12 @@ Tunable constants: `PULL`, `DROP` (line 311), `LIFT`, `MIN_DIST`, `MIN_V` (429),
 
 ## 8. Behavior Controls (Study 1: Fit)
 
-A collapsible **Behavior Controls** panel under the Study 1 stage tunes the study's real parameters live. Defaults equal the original values, so the study behaves exactly as before until a control is moved.
+A collapsible **Behavior Controls** panel under the Study 1 stage tunes the study's real parameters live. Defaults are the original study values, except follow lag (now 0ms) and snap / return duration (now 800ms).
 
 | Control | Parameter it drives | Unit, range | Default |
 |---|---|---|---|
-| Follow lag (duration) | `LAG`, smoothing time constant in `frame()` | ms, 0-300 | 70 |
-| Snap / return duration | `--snap-ms`, `#tire.anim` transition | ms, 100-1000 | 350 |
+| Follow lag (duration) | `LAG`, smoothing time constant in `frame()` | ms, 0-300 | 0 (originally 70) |
+| Snap / return duration | `--snap-ms`, `#tire.anim` transition | ms, 100-1000 | 800 (originally 350) |
 | Lock-in delay | `SEAT_DELAY`, the `setTimeout` in `drop()` | ms, 0-1000 | 260 |
 | Pull zone radius (distance) | `PULL` | px, 40-200 | 95 |
 | Seat bounce (amplitude) | `--seat-amp`, `@keyframes seat` | px, 0-30 | 10 |
@@ -138,4 +138,4 @@ A collapsible **Behavior Controls** panel under the Study 1 stage tunes the stud
 
 - **Reset state** puts the tire back on the rack (same as the study's Reset) and keeps the current values.
 - **Restore defaults** sets every control back to the original values.
-- **Copy as prompt** copies the current values, each with its original value, as a ready-to-paste instruction for making them permanent.
+- **Copy as prompt** copies the current values, each with its current default, as a ready-to-paste instruction for making them permanent.
