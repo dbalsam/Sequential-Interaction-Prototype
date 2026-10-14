@@ -3,6 +3,8 @@ Codebase for my sequential interaction project in IXD 107-03, working with Claud
 
 **Live site:** https://dbalsam.github.io/Sequential-Interaction-Prototype/
 
+**Study (with Behavior Controls):** https://dbalsam.github.io/Sequential-Interaction-Prototype/study/
+
 ## Pit stop training drill
 
 One linear interaction sequence built from the three pit stop studies. Each step unlocks only after the previous one succeeds:
@@ -18,6 +20,7 @@ The drill ends with a result card (total time, split per step, best time saved i
 
 - `docs/` is the published website (GitHub Pages source: `main` branch, `/docs` folder). It's plain HTML, CSS and JS, with no build step.
   - `index.html`, `css/style.css`, `js/sequence.js`, `.nojekyll`
+  - `study/index.html` is a published copy of `studies/pit-stop-studies/index.html`. Edit the studies file, then copy it here.
 - `studies/pit-stop-studies/` holds the original interaction studies, extracted from `pit-stop-studies.zip`, with notes in `STUDY.md`.
 - `index.html` and `test image.jpg` at the root are the earlier "Hello class!" page.
 
