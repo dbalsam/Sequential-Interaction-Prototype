@@ -1,0 +1,11 @@
+{
+  "name": "pit-stop-interaction-studies",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Three connected pit stop interaction studies (fit wheel, drop jack, release car) in one self-contained HTML file.",
+  "scripts": {
+    "start": "npx --yes serve . -l 3000",
+    "dev": "python3 -m http.server 3000"
+  },
+  "dependencies": {}
+}

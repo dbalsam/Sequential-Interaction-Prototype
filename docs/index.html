@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pit Stop Drill</title>
+<meta name="description" content="A pit crew training drill: fit the wheel, drop the jack, send the car. One linear interaction sequence.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>Pit stop training drill</h1>
+    <p class="sub">Fit the wheel, drop the jack, send the car. Each step unlocks the next. The clock starts the moment you touch the tire.</p>
+  </header>
+
+  <nav class="bar" aria-label="Drill progress">
+    <ol class="progress">
+      <li data-step="0" data-status="active">Start</li>
+      <li data-step="1" data-status="locked">Fit</li>
+      <li data-step="2" data-status="locked">Drop</li>
+      <li data-step="3" data-status="locked">Send</li>
+    </ol>
+    <span class="clock" id="clock">0.00 s</span>
+  </nav>
+  <p class="sr-only" id="announce" aria-live="polite"></p>
+
+  <!-- Step 0: the car arrives -->
+  <section class="step" id="step0" data-status="active" aria-labelledby="h0">
+    <h2 id="h0"><span class="num">0</span> Car in</h2>
+    <div class="stage">
+      <div id="pitbox" data-phase="empty" aria-hidden="true">
+        <div class="pb-jack"></div>
+        <div class="pb-car"></div>
+      </div>
+      <div class="row">
+        <span class="status" id="state0">Pit box empty. Waiting for the car.</span>
+      </div>
+      <button class="solid" id="start">Start drill</button>
+    </div>
+  </section>
+
+  <!-- Step 1: Fit the wheel (drag) -->
+  <section class="step" id="step1" data-status="locked" aria-labelledby="h1">
+    <h2 id="h1"><span class="num">1</span> Fit the wheel <small>drag</small></h2>
+    <p class="sub">Drag the fresh tire from the rack onto the empty hub.</p>
+    <div class="stage">
+      <div id="field">
+        <div id="rack"></div>
+        <div id="axle"></div>
+        <div id="halo" data-level="far"></div>
+        <div id="socket"></div>
+        <div id="tire" class="off" tabindex="-1" role="slider" aria-disabled="true" aria-label="Fresh tire. Arrow keys move toward the hub, Enter to drop." aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <svg viewBox="0 0 88 88" aria-hidden="true">
+            <circle class="t-body" cx="44" cy="44" r="40"/>
+            <circle class="t-hub" cx="44" cy="44" r="14"/>
+            <path class="t-grip" d="M44 8v8M44 72v8M8 44h8M72 44h8"/>
+            <path class="t-check" d="M35 45l7 7 12-15"/>
+          </svg>
+        </div>
+      </div>
+      <div class="row">
+        <span class="status" id="state1">Locked. The car isn't in yet.</span>
+        <span class="meta" id="gap1"></span>
+      </div>
+      <div class="chip" id="next1" data-open="false"><span class="dot"></span><span id="nextText1">Jack locked</span></div>
+    </div>
+    <details class="spec">
+      <summary>Interaction spec</summary>
+      <dl>
+        <dt>Conceptual action</dt><dd>Place: carry a fresh tire to the axle and seat it.</dd>
+        <dt>Physical input</dt><dd>Drag and drop. No tapping. (Keyboard: arrows, Enter.)</dd>
+        <dt>Intended feeling</dt><dd>Heavy, then locked in: a real wheel with weight that the hub helps into place.</dd>
+        <dt>Affordance / signifier</dt><dd>Tire sits in a dashed rack with grip ticks on its tread. The hub is an empty dashed ring with a small socket at its center.</dd>
+        <dt>Feedback + state change</dt><dd>The tire trails slightly behind your hand, like it has weight. Inside the pull zone it slows and drifts toward the hub while the ring thickens. Inside the drop zone the ring goes heavy and solid. Release there: the wheel drops onto the studs with a small bounce, then the ring fills and a check appears. Release elsewhere: the tire drops back to the rack.</dd>
+        <dt>What it enables</dt><dd>The hub is filled and the tire is locked, so the jack can be dropped.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <!-- Step 2: Drop the jack (swipe) -->
+  <section class="step" id="step2" data-status="locked" aria-labelledby="h2">
+    <h2 id="h2"><span class="num">2</span> Drop the jack <small>swipe</small></h2>
+    <p class="sub">Flick down on the car. Light all three chevrons to drop it.</p>
+    <div class="stage">
+      <div id="zone" data-state="locked" tabindex="-1" role="button" aria-disabled="true" aria-label="Car on jack. Swipe down quickly to drop. Keyboard: press Enter to drop.">
+        <div id="jack"></div>
+        <div id="car"></div>
+        <div class="cue" aria-hidden="true"><svg viewBox="0 0 40 120" width="40" height="120"><path class="chev" d="M6 10l14 14 14-14"/><path class="chev" d="M6 48l14 14 14-14"/><path class="chev" d="M6 86l14 14 14-14"/></svg></div>
+      </div>
+      <div class="row">
+        <span class="status" id="state2">Locked. Fit the tire first.</span>
+      </div>
+      <div class="chip" id="next2" data-open="false"><span class="dot"></span><span id="nextText2">Release locked</span></div>
+    </div>
+    <details class="spec">
+      <summary>Interaction spec</summary>
+      <dl>
+        <dt>Conceptual action</dt><dd>Lower: take the car off the jack and put its weight back on the ground.</dd>
+        <dt>Physical input</dt><dd>A downward swipe, judged on both distance and speed. (Keyboard: Enter.)</dd>
+        <dt>Intended feeling</dt><dd>Snappy and decisive. The jack resists hesitation.</dd>
+        <dt>Affordance / signifier</dt><dd>Three stacked down chevrons, dim and dashed. They light from the top down as you swipe faster, and all three lit means fast enough. Hollow dashed car and jack mean locked.</dd>
+        <dt>Feedback + state change</dt><dd>The car follows your finger down while you swipe and the chevrons light with live speed. Fast and far enough: the car drops and the jack collapses. Too slow or too short: the jack catches the car and it jolts back up past its start, then settles.</dd>
+        <dt>What it enables</dt><dd>The car is on the ground and the jack is flat, so the release lever unlocks.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <!-- Step 3: Send the car (pull) -->
+  <section class="step" id="step3" data-status="locked" aria-labelledby="h3">
+    <h2 id="h3"><span class="num">3</span> Send the car <small>pull</small></h2>
+    <p class="sub">Pull the lever past the line, then let go.</p>
+    <div class="stage">
+      <div class="field3">
+        <div class="track" id="track">
+          <div class="fill" id="fill"></div>
+          <div class="commit" id="commit"></div>
+          <div class="handle" id="handle" tabindex="-1" role="slider" aria-label="Release lever" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-state="locked"><span class="tri"></span><span id="hlabel">Locked</span></div>
+        </div>
+        <div class="lane"><div class="mini" id="mini"></div></div>
+      </div>
+      <div class="row">
+        <span class="status" id="state3">Locked. Lower the car first.</span>
+      </div>
+      <div class="chip" id="next3" data-open="false"><span class="dot"></span><span id="nextText3">Car held</span></div>
+    </div>
+    <details class="spec">
+      <summary>Interaction spec</summary>
+      <dl>
+        <dt>Conceptual action</dt><dd>Commit: send the car out. This is the one irreversible step.</dd>
+        <dt>Physical input</dt><dd>Drag the lever up past a commit line, then release. (Keyboard: Up arrow, Enter.)</dd>
+        <dt>Intended feeling</dt><dd>Weight and finality: nothing moves until the lever slams.</dd>
+        <dt>Affordance / signifier</dt><dd>Dashed, hollow lever labeled Locked means unavailable. Solid lever with an up arrow and the word Pull means ready. The dashed line shows how far is far enough.</dd>
+        <dt>Feedback + state change</dt><dd>The lever lags behind your hand, so it feels heavy, and the track fills behind it. Crossing the line inverts the lever and the label changes to Let go. Releasing early lets it drop back under its own weight with a small bounce. Releasing past the line slams the lever to the top, stops the clock, and only then launches the car.</dd>
+        <dt>What it enables</dt><dd>The car is gone and the lever goes inert. The drill ends with your result.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <!-- Ending: drill result -->
+  <section class="step result" id="result" hidden aria-labelledby="hr">
+    <h2 id="hr">Drill complete</h2>
+    <div class="stage">
+      <p class="total"><span id="rTotal">0.00</span> s <span class="badge" id="rBadge" hidden>New best</span></p>
+      <dl class="splits">
+        <dt>Fit the wheel</dt><dd id="rFit">0.00 s</dd>
+        <dt>Drop the jack</dt><dd id="rDrop">0.00 s</dd>
+        <dt>Send the car</dt><dd id="rSend">0.00 s</dd>
+        <dt>Best time</dt><dd id="rBest">-</dd>
+      </dl>
+      <button class="solid" id="again">Run it again</button>
+    </div>
+  </section>
+</main>
+<script src="js/sequence.js"></script>
+</body>
+</html>

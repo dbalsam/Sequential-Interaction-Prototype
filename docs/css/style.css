@@ -1,0 +1,146 @@
+/* Pit stop training drill. Styles merged from the three pit stop studies
+   (studies/pit-stop-studies/index.html); shared tokens and base rules deduplicated. */
+
+:root{--bg:#ededed;--fg:#161616;--mid:#808080;--line:#b0b0b0;--soft:#dedede;--solid:#2a2a2a;--onsolid:#f2f2f2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171717;--fg:#ededed;--mid:#8a8a8a;--line:#4a4a4a;--soft:#232323;--solid:#d8d8d8;--onsolid:#161616}}
+:root[data-theme="dark"]{--bg:#171717;--fg:#ededed;--mid:#8a8a8a;--line:#4a4a4a;--soft:#232323;--solid:#d8d8d8;--onsolid:#161616}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:24px;margin:0 0 4px;font-weight:600}
+h2{font-size:20px;margin:0 0 4px;font-weight:600;display:flex;align-items:baseline;gap:10px}
+h2 small{font-size:13px;font-weight:400;color:var(--mid)}
+h2 .num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:2px dashed var(--mid);color:var(--mid);border-radius:50%;font-size:14px;flex:none;align-self:center}
+.sub{margin:0 0 14px;color:var(--mid)}
+.stage{border:1px solid var(--line);background:var(--soft);padding:18px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.status{font-weight:600}
+.meta{color:var(--mid);font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Sequence: header, progress bar, step states */
+.top{margin-bottom:14px}
+.bar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--bg);border-bottom:2px solid var(--fg);padding:10px 0;margin-bottom:22px}
+.progress{display:flex;gap:6px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
+.progress li{font-size:14px;padding:3px 10px;border:2px dashed var(--mid);color:var(--mid)}
+.progress li[data-status="active"]{border-style:solid;border-color:var(--fg);color:var(--fg);font-weight:600}
+.progress li[data-status="done"]{border-style:solid;border-color:var(--fg);background:var(--fg);color:var(--bg)}
+.clock{font-variant-numeric:tabular-nums;font-weight:600;font-size:18px}
+.step{margin-bottom:34px;scroll-margin-top:70px}
+.step[data-status="active"] h2 .num{border-style:solid;border-color:var(--fg);color:var(--fg)}
+.step[data-status="done"] h2 .num{border-style:solid;border-color:var(--fg);background:var(--fg);color:var(--bg)}
+.step[data-status="locked"] h2,.step[data-status="locked"] .sub{color:var(--mid)}
+.step[data-status="active"] .stage{border:2px solid var(--fg);padding:17px}
+.step[hidden]{display:none}
+
+.chip{display:inline-flex;align-items:center;gap:8px;border:2px dashed var(--mid);color:var(--mid);padding:4px 10px;margin-top:14px}
+.chip .dot{width:10px;height:10px;border:2px solid currentColor;border-radius:50%}
+.chip[data-open="true"]{border-style:solid;border-color:var(--fg);color:var(--fg)}
+.chip[data-open="true"] .dot{background:currentColor}
+button.solid{font:inherit;font-weight:600;background:var(--solid);color:var(--onsolid);border:2px solid var(--solid);padding:10px 20px;cursor:pointer;margin-top:14px;min-height:44px}
+button.solid:focus-visible{outline:3px solid var(--fg);outline-offset:3px}
+button.solid[hidden]{display:none}
+.spec{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.spec summary{cursor:pointer;font-weight:600}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;margin:12px 0 0}
+dt{color:var(--mid)}
+dd{margin:0}
+@media (max-width:480px){.spec dl{grid-template-columns:1fr;gap:2px}.spec dd{margin-bottom:10px}}
+
+/* Step 0: car arrives and is raised */
+#pitbox{position:relative;height:150px;border-bottom:3px solid var(--fg);margin-bottom:14px;overflow:hidden}
+#pitbox .pb-car{position:absolute;left:50%;width:180px;margin-left:-90px;height:46px;bottom:14px;background:var(--solid);transform:translateX(-160%);opacity:0}
+#pitbox .pb-car::before,#pitbox .pb-car::after{content:"";position:absolute;bottom:-12px;width:30px;height:30px;border-radius:50%;background:var(--bg);border:4px solid var(--solid);transition:border-color .2s,opacity .2s}
+#pitbox .pb-car::before{left:20px}#pitbox .pb-car::after{right:20px}
+#pitbox .pb-jack{position:absolute;left:50%;margin-left:-14px;width:28px;bottom:0;height:0;border:2px solid var(--fg);border-bottom:0;background:var(--line);opacity:0}
+#pitbox[data-phase="arriving"] .pb-car{opacity:1;transform:none;transition:transform 1s cubic-bezier(.2,.7,.3,1),opacity .2s}
+#pitbox[data-phase="arriving"] .pb-jack,#pitbox[data-phase="up"] .pb-jack{opacity:1}
+#pitbox[data-phase="up"] .pb-car{opacity:1;transform:none;bottom:74px;transition:bottom .45s cubic-bezier(.3,0,.3,1)}
+#pitbox[data-phase="up"] .pb-jack{height:60px;transition:height .45s cubic-bezier(.3,0,.3,1)}
+#pitbox[data-phase="up"] .pb-car::after{border-style:dashed;border-color:var(--mid);background:transparent}
+/* Mirrors the later steps: the car comes down with the new wheel on, then leaves */
+#pitbox[data-phase="down"] .pb-car,#pitbox[data-phase="gone"] .pb-car{opacity:1;transform:none;bottom:14px;transition:bottom .09s ease-in}
+#pitbox[data-phase="down"] .pb-jack{opacity:1;height:0;transition:height .09s ease-in}
+#pitbox[data-phase="gone"] .pb-car{transform:translateX(160%);opacity:0;transition:transform .5s cubic-bezier(.5,0,1,.6),opacity .2s .3s}
+@media (prefers-reduced-motion:reduce){#pitbox .pb-car,#pitbox .pb-jack{transition-duration:.01s!important}}
+
+/* Step 1: Fit (drag) */
+#field{position:relative;height:260px;margin-bottom:14px;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden}
+#rack{position:absolute;left:4%;top:50%;width:26%;height:150px;transform:translateY(-50%);border:2px dashed var(--line)}
+#axle{position:absolute;top:0;bottom:0;width:0;border-left:2px solid var(--line);left:66%}
+#halo{position:absolute;width:150px;height:150px;border-radius:50%;border:2px dashed var(--line);transform:translate(-50%,-50%);transition:border-width .12s,border-color .12s,background .12s}
+#halo[data-level="near"]{border-style:solid;border-width:3px;border-color:var(--mid)}
+#halo[data-level="ready"]{border-style:solid;border-width:5px;border-color:var(--fg)}
+#halo[data-level="fitted"]{border-style:solid;border-width:5px;border-color:var(--fg);background:var(--line)}
+#socket{position:absolute;width:30px;height:30px;border-radius:50%;border:2px dashed var(--mid);transform:translate(-50%,-50%)}
+#tire{position:absolute;left:-44px;top:-44px;width:88px;height:88px;cursor:grab;touch-action:none;outline-offset:4px}
+#tire:focus-visible{outline:3px solid var(--fg)}
+#tire.grab{cursor:grabbing}
+#tire.anim{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+#tire.locked{cursor:default}
+#tire svg{width:100%;height:100%;display:block}
+.t-body{fill:var(--solid);stroke:var(--fg);stroke-width:2}
+.t-hub{fill:var(--onsolid);stroke:var(--mid);stroke-width:2}
+.t-grip{stroke:var(--mid);stroke-width:3;stroke-linecap:round}
+.t-check{fill:none;stroke:var(--solid);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;display:none}
+#tire.locked .t-body{fill:var(--line);stroke-width:4}
+#tire.locked .t-grip{display:none}
+#tire.locked .t-check{display:block;animation:fadein .15s .45s both}
+/* Not yet available: hollow and dashed, matching the locked look of steps 2 and 3 */
+#tire.off{cursor:not-allowed}
+#tire.off .t-body{fill:transparent;stroke:var(--mid);stroke-dasharray:6 5}
+#tire.off .t-hub{fill:transparent;stroke-dasharray:4 4}
+#tire.off .t-grip{display:none}
+#tire.seat svg{animation:seat .4s .12s cubic-bezier(.3,0,.4,1) both}
+@keyframes seat{0%{transform:translateY(-10px) scale(1.07)}45%{transform:translateY(4px) scale(.96)}70%{transform:translateY(-1.5px) scale(1.01)}100%{transform:none}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#tire.anim{transition-duration:.01s}#tire.seat svg{animation:none}}
+
+/* Step 2: Drop the jack (swipe) */
+#zone{position:relative;height:220px;border-bottom:3px solid var(--fg);margin-bottom:14px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;outline-offset:3px}
+#zone:focus-visible{outline:3px solid var(--fg)}
+#zone.grab{cursor:grabbing}
+#zone[data-state="locked"],#zone[data-state="dropped"]{cursor:default}
+#zone[data-state="locked"]{touch-action:auto}
+#car{position:absolute;left:50%;width:180px;margin-left:-90px;height:46px;background:var(--solid)}
+#car::before,#car::after{content:"";position:absolute;bottom:-12px;width:30px;height:30px;border-radius:50%;background:var(--bg);border:4px solid var(--solid)}
+#car::before{left:20px}#car::after{right:20px}
+#jack{position:absolute;left:50%;margin-left:-14px;width:28px;bottom:0;border:2px solid var(--fg);border-bottom:0;background:var(--line)}
+#zone[data-state="locked"] #jack{border-style:dashed;border-color:var(--mid);background:transparent}
+#zone[data-state="locked"] #car{background:transparent;border:2px dashed var(--mid)}
+#zone[data-state="locked"] #car::before,#zone[data-state="locked"] #car::after{border-color:var(--mid)}
+.anim #car,.anim #jack{transition:bottom .09s ease-in,height .09s ease-in}
+.back #car,.back #jack{transition:bottom .5s cubic-bezier(.2,1.7,.35,1),height .5s cubic-bezier(.2,1.7,.35,1)}
+.cue{position:absolute;right:6%;top:24px;pointer-events:none}
+.chev{fill:none;stroke:var(--line);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:6 6;transition:stroke .08s,stroke-width .08s}
+.chev.on{stroke:var(--fg);stroke-width:8;stroke-dasharray:none}
+#zone[data-state="locked"] .cue,#zone[data-state="dropped"] .cue{display:none}
+@media (prefers-reduced-motion:reduce){.anim #car,.anim #jack,.back #car,.back #jack{transition-duration:.01s}}
+
+/* Step 3: Send (pull) */
+.field3{display:flex;justify-content:center;gap:48px;align-items:flex-end;margin-bottom:14px}
+.track{position:relative;width:132px;height:220px;border:2px solid var(--line);touch-action:none}
+.fill{position:absolute;left:0;right:0;bottom:0;height:28px;background:var(--line)}
+.commit{position:absolute;left:-10px;right:-10px;height:0;border-top:2px dashed var(--fg)}
+.handle{position:absolute;left:4px;right:4px;bottom:0;height:56px;background:var(--solid);color:var(--onsolid);border:2px solid var(--solid);display:flex;align-items:center;justify-content:center;font-weight:600;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.handle:focus-visible{outline:3px solid var(--fg);outline-offset:3px}
+.handle[data-state="locked"]{background:transparent;color:var(--mid);border:2px dashed var(--mid);cursor:not-allowed}
+.handle[data-state="armed"]{background:var(--fg);color:var(--bg)}
+.handle[data-state="released"]{background:transparent;color:var(--mid);border:2px solid var(--line);cursor:default}
+.handle .tri{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:10px solid currentColor;margin-right:8px}
+.handle[data-state="locked"] .tri,.handle[data-state="released"] .tri{display:none}
+.lane{position:relative;width:76px;height:220px;border-left:2px solid var(--line);border-right:2px solid var(--line);overflow:hidden}
+.mini{position:absolute;left:14px;width:44px;height:72px;bottom:14px;background:var(--solid)}
+.mini.go{transform:translateY(-320px);transition:transform .5s cubic-bezier(.5,0,1,.6)}
+.track.thud{animation:thud .22s}
+@keyframes thud{0%{transform:none}30%{transform:translateY(5px)}65%{transform:translateY(-2px)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.mini.go{transition-duration:.01s}.track.thud{animation:none}}
+
+/* Ending: result card */
+.result .stage{border:2px solid var(--fg);padding:17px}
+.total{font-size:44px;font-weight:700;margin:0;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.badge{font-size:14px;font-weight:600;background:var(--fg);color:var(--bg);padding:3px 10px}
+.badge[hidden]{display:none}
+.splits{margin-top:14px}
+.splits dd{font-variant-numeric:tabular-nums;font-weight:600}
