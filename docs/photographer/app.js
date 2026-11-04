@@ -157,6 +157,113 @@
   }
   // A DSLR frame: mirror flips up (low thump), the shutter curtains run (sharp tick), mirror drops back.
   const shutterSound = (at = 0) => { click(at, 0.035, 700, 1.1); click(at + 0.012, 0.02, 3800, 0.6); click(at + 0.055, 0.04, 1100, 0.8); };
+  // ---------- Scene sounds: what you hear on the other side of the lens as you fire ----------
+  function noiseBuf(a, secs){
+    const buf = a.createBuffer(1, Math.floor(a.sampleRate * secs), a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
+    return buf;
+  }
+  function out(a, at, pan = 0){
+    const g = a.createGain(); g.gain.value = 0;
+    if (a.createStereoPanner) { const p = a.createStereoPanner(); p.pan.value = pan; g.connect(p).connect(a.destination); g.pan = p.pan; }
+    else g.connect(a.destination);
+    return g;
+  }
+  // A race car screaming past: engine tone drops in pitch as it passes (Doppler) and sweeps left to right.
+  function carPass(at = 0, dur = 2.2, gear = 1){
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime + at, mid = t0 + dur * 0.38, end = t0 + dur;
+    const g = out(a, at, -0.9);
+    if (g.pan) { g.pan.setValueAtTime(-0.9, t0); g.pan.linearRampToValueAtTime(0.9, end); }
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(1.0, mid);
+    g.gain.exponentialRampToValueAtTime(0.0001, end);
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 1.5;
+    lp.frequency.setValueAtTime(900, t0); lp.frequency.linearRampToValueAtTime(3200, mid); lp.frequency.exponentialRampToValueAtTime(700, end);
+    lp.connect(g);
+    const base = 210 * gear;
+    [[1, 'sawtooth', 0.32], [2.01, 'square', 0.12], [0.5, 'sawtooth', 0.22]].forEach(([mul, type, lvl]) => {
+      const o = a.createOscillator(), og = a.createGain();
+      o.type = type; og.gain.value = lvl;
+      o.frequency.setValueAtTime(base * mul * 1.18, t0);
+      o.frequency.setValueAtTime(base * mul * 1.12, mid - 0.06);
+      o.frequency.exponentialRampToValueAtTime(base * mul * 0.82, mid + 0.12);   // the Doppler drop
+      o.frequency.linearRampToValueAtTime(base * mul * 0.78, end);
+      const wob = a.createOscillator(), wg = a.createGain();           // engine roughness
+      wob.frequency.value = 31; wg.gain.value = base * mul * 0.02;
+      wob.connect(wg).connect(o.frequency);
+      o.connect(og).connect(lp); o.start(t0); o.stop(end); wob.start(t0); wob.stop(end);
+    });
+    const n = a.createBufferSource(); n.buffer = noiseBuf(a, dur);     // tyre and wind rush
+    const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.6;
+    const ng = a.createGain(); ng.gain.value = 0.35;
+    n.connect(bp).connect(ng).connect(g); n.start(t0);
+  }
+  // Low rumble of the circuit under the passing car.
+  function trackBed(at = 0, dur = 2.6){
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime + at;
+    const n = a.createBufferSource(); n.buffer = noiseBuf(a, dur);
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;
+    const g = out(a, at, 0.3);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    n.connect(lp).connect(g); n.start(t0);
+  }
+  // A crowd cheering: many voices (band-passed noise with wobbling vowels), claps and a couple of whistles.
+  function cheer(at = 0, dur = 2.8){
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime + at, end = t0 + dur;
+    const g = out(a, at, 0);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.7, t0 + 0.35);
+    g.gain.setValueAtTime(0.7, t0 + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, end);
+    const buf = noiseBuf(a, dur);
+    [420, 650, 900, 1250, 1800, 2600].forEach((f, i) => {
+      const n = a.createBufferSource(); n.buffer = buf; n.playbackRate.value = 0.9 + i * 0.04;
+      const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 4;
+      const lfo = a.createOscillator(), lg = a.createGain();
+      lfo.frequency.value = 2.5 + Math.random() * 4; lg.gain.value = f * 0.12;
+      lfo.connect(lg).connect(bp.frequency);
+      const vg = a.createGain(); vg.gain.value = 0.55;
+      n.connect(bp).connect(vg).connect(g); n.start(t0); lfo.start(t0); lfo.stop(end);
+    });
+    for (let i = 0; i < 26; i++) click(at + 0.15 + Math.random() * (dur - 0.7), 0.025, 1500 + Math.random()*1500, 0.25 + Math.random()*0.25);
+    [[0.5, 2600], [1.3, 3100]].forEach(([w, f]) => {                  // two fans whistling
+      const o = a.createOscillator(), og = out(a, at + w, Math.random() - 0.5);
+      const ts = t0 + w;
+      o.frequency.setValueAtTime(f, ts); o.frequency.linearRampToValueAtTime(f * 1.25, ts + 0.18); o.frequency.linearRampToValueAtTime(f * 1.1, ts + 0.5);
+      og.gain.setValueAtTime(0.0001, ts); og.gain.exponentialRampToValueAtTime(0.05, ts + 0.04); og.gain.exponentialRampToValueAtTime(0.0001, ts + 0.55);
+      o.connect(og); o.start(ts); o.stop(ts + 0.6);
+    });
+  }
+  // Champagne: the cork pops, then the bottle sprays in fizzy, shaken bursts.
+  function champagne(at = 0){
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime + at;
+    click(at, 0.03, 2400, 0.8);                                        // the cork
+    const o = a.createOscillator(), og = out(a, at, -0.1);             // hollow "pop" of the neck
+    o.frequency.setValueAtTime(520, t0); o.frequency.exponentialRampToValueAtTime(140, t0 + 0.09);
+    og.gain.setValueAtTime(0.0001, t0); og.gain.exponentialRampToValueAtTime(0.4, t0 + 0.004); og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+    o.connect(og); o.start(t0); o.stop(t0 + 0.13);
+    const s0 = t0 + 0.12, dur = 2.1;                                    // the spray
+    const n = a.createBufferSource(); n.buffer = noiseBuf(a, dur);
+    const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000;
+    const pk = a.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 6500; pk.gain.value = 8;
+    const g = out(a, at + 0.12, 0.2);
+    if (g.pan) { g.pan.setValueAtTime(-0.4, s0); g.pan.linearRampToValueAtTime(0.5, s0 + dur); }
+    g.gain.setValueAtTime(0.0001, s0); g.gain.exponentialRampToValueAtTime(0.22, s0 + 0.05);
+    for (let k = 1; k <= 6; k++) g.gain.linearRampToValueAtTime(k % 2 ? 0.1 : 0.22, s0 + k * 0.22);   // shaking the bottle
+    g.gain.exponentialRampToValueAtTime(0.0001, s0 + dur);
+    n.connect(hp).connect(pk).connect(g); n.start(s0);
+    for (let i = 0; i < 40; i++) click(at + 0.15 + Math.random() * 1.6, 0.004, 5000 + Math.random()*4000, 0.1);   // fizz
+  }
+  // Which scene sound plays for each shot. The shutter sound plays on top, unchanged.
+  function sceneSound(id){
+    if (id.startsWith('panning')) { carPass(0, 2.0); trackBed(0); }
+    else if (id.startsWith('sharp')) { carPass(0, 1.6, 1.15); carPass(0.35, 1.7, 1.05); trackBed(0); }
+    else if (id.startsWith('team')) cheer(0);
+    else if (id.startsWith('driver')) champagne(0.05);
+  }
+
   function beep(){
     const a = audio(); if (!a) return;
     [0, 0.09].forEach((t) => {
@@ -454,6 +561,7 @@
     live.firing = true;
     const s = SHOTS[shotId], n = s.burst ? 6 : 1, gap = 0.1;   // burst at 10 frames per second
     el.shutter.dataset.stage = 'full';
+    sceneSound(shotId);
     for (let i = 0; i < n; i++) {
       shutterSound(i * gap);
       setTimeout(() => {
