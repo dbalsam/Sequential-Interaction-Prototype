@@ -132,6 +132,7 @@
     layer.style.backgroundImage = `url("${IMG(shot.img)}")`;
     layer.style.backgroundSize = `${W}px ${H}px`;
     layer.style.backgroundPosition = `${pad + fw/2 - cx*W}px ${pad + fh/2 - cy*H}px`;
+    layer._geo = { W, H, ox: pad + fw/2 - cx*W, oy: pad + fh/2 - cy*H };   // for the live-photo layer
     const b = blurFrac * fw;
     layer.style.filter = b > 0.3 ? `blur(${b.toFixed(1)}px)` : 'none';
   }
@@ -168,6 +169,129 @@
     });
   }
 
+  /* ---------- Live photos ----------
+     A canvas over certain photos brings one thing in them to life:
+     the champagne bottles tilt and spray, and the confetti keeps falling.
+     Bottle outlines and pivots are fractions of the photo's width and height. */
+  const FX = {
+    'podium-champagne': { bottles:[
+      { poly:[[0.328,0.435],[0.362,0.450],[0.472,0.647],[0.438,0.713],[0.375,0.698],[0.338,0.563],[0.320,0.478]], pivot:[0.335,0.435], amp:5, speed:2.4, phase:0,   patch:[0.11,0],  mouth:[0.304,0.355], spray:[-0.35,-1] },
+      { poly:[[0.606,0.492],[0.632,0.478],[0.603,0.619],[0.557,0.773],[0.505,0.777],[0.482,0.724],[0.525,0.600]], pivot:[0.619,0.484], amp:5, speed:2.1, phase:1.7, patch:[-0.1,0],  mouth:[0.634,0.411], spray:[0.25,-1] },
+    ] },
+    'driver-champagne': { bottles:[
+      { poly:[[0.537,0.178],[0.588,0.103],[0.625,0.034],[0.652,0.015],[0.665,0.084],[0.632,0.161],[0.578,0.218],[0.555,0.229]], pivot:[0.494,0.263], amp:2, speed:1.1, phase:0, patch:[-0.12,0] },
+    ] },
+    'team-confetti': { confetti:true },
+  };
+  const photos = {};
+  const photo = (name) => {
+    if (!photos[name]) { photos[name] = new Image(); photos[name].src = IMG(name); }
+    return photos[name].complete && photos[name].naturalWidth ? photos[name] : null;
+  };
+  // Where a background-size:cover photo sits inside its box.
+  function coverGeo(host, name, pos = 'center'){
+    const p = pos.split(' ').map((v) => v === 'center' ? 0.5 : parseFloat(v) / 100);
+    const px = p[0] ?? 0.5, py = p[1] ?? 0.5;
+    return () => {
+      const im = photo(name); if (!im) return null;
+      const cw = host.clientWidth, ch = host.clientHeight;
+      const s = Math.max(cw / im.naturalWidth, ch / im.naturalHeight), W = im.naturalWidth * s, H = im.naturalHeight * s;
+      return { W, H, ox:(cw - W) * px, oy:(ch - H) * py };
+    };
+  }
+  const liveHosts = new Set();
+  function setFx(host, name, geo){
+    const spec = FX[name];
+    if (!spec || reduceMotion) { host._fx?.canvas.remove(); host._fx = null; liveHosts.delete(host); return; }
+    photo(name);
+    if (!host._fx) {
+      const canvas = document.createElement('canvas');
+      canvas.className = 'live'; canvas.setAttribute('aria-hidden', 'true');
+      host.appendChild(canvas);
+      host._fx = { canvas, ctx:canvas.getContext('2d') };
+    }
+    Object.assign(host._fx, { name, spec, geo, t:Math.random() * 10, drops:[], confetti:null });
+    liveHosts.add(host);
+  }
+
+  const CONFETTI = ['#2f63d6','#6fa3ff','#dce8ff','#1b47a8','#ffffff','#9cc2ff'];
+  function drawFx(host, dt){
+    const f = host._fx, cv = f.canvas, ctx = f.ctx;
+    const w = host.clientWidth, h = host.clientHeight;
+    if (!w || !h || !host.offsetParent) return;           // not on screen
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); f.confetti = null; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    f.t += dt;
+
+    if (f.spec.confetti) {
+      if (!f.confetti) {
+        const n = Math.max(24, Math.min(240, Math.round(w * h / 2200)));
+        f.confetti = Array.from({ length:n }, () => newPiece(w, h, true));
+      }
+      const k = Math.max(0.5, w / 700);
+      for (const c of f.confetti) {
+        c.y += c.vy * k * dt; c.x += Math.sin(f.t * c.sway + c.ph) * 22 * k * dt; c.spin += c.vs * dt;
+        if (c.y > h + 20) Object.assign(c, newPiece(w, h, false));
+        ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot + c.spin * 0.3);
+        ctx.scale(1, Math.cos(c.spin));                      // flutter: the piece flips as it falls
+        ctx.fillStyle = c.col; ctx.fillRect(-c.w * k / 2, -c.h * k / 2, c.w * k, c.h * k);
+        ctx.restore();
+      }
+      return;
+    }
+
+    const g = f.geo(), im = photo(f.name);
+    if (!g || !im) return;
+    const P = ([x, y]) => [g.ox + x * g.W, g.oy + y * g.H];
+    const path = (poly) => { ctx.beginPath(); poly.forEach((pt, i) => { const [x, y] = P(pt); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); };
+    for (const b of f.spec.bottles) {
+      // 1. paper over the bottle with nearby background, so the moving bottle leaves no ghost
+      ctx.save(); path(b.poly); ctx.clip(); ctx.filter = 'blur(6px)';
+      ctx.drawImage(im, g.ox + b.patch[0] * g.W, g.oy + b.patch[1] * g.H, g.W, g.H);
+      ctx.restore();
+      // 2. the bottle itself, tilting around the hand that holds it
+      const a = (b.amp * Math.PI / 180) * (Math.sin(f.t * b.speed + b.phase) + 0.35 * Math.sin(f.t * b.speed * 2.7));
+      const [px, py] = P(b.pivot);
+      ctx.save(); ctx.translate(px, py); ctx.rotate(a); ctx.translate(-px, -py);
+      path(b.poly); ctx.clip(); ctx.drawImage(im, g.ox, g.oy, g.W, g.H);
+      ctx.restore();
+      // 3. champagne spraying out of the neck, in pulses as the bottle is shaken
+      if (b.mouth) {
+        const [mx, my] = P(b.mouth), k = g.W / 800;
+        const rate = 160 * (0.4 + 0.6 * Math.max(0, Math.sin(f.t * b.speed * 1.3 + b.phase)));
+        for (let i = 0; i < rate * dt; i++) {
+          const ang = Math.atan2(b.spray[1], b.spray[0]) + a + (Math.random() - 0.5) * 0.7;
+          const sp = (140 + Math.random() * 220) * k;
+          f.drops.push({ x:mx, y:my, vx:Math.cos(ang) * sp, vy:Math.sin(ang) * sp, life:0, max:0.5 + Math.random() * 0.6, r:(0.8 + Math.random() * 1.8) * Math.max(0.6, k) });
+        }
+        ctx.fillStyle = '#fffaf0';
+        f.drops = f.drops.filter((d) => {
+          d.life += dt; d.vy += 420 * k * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+          if (d.life > d.max) return false;
+          ctx.globalAlpha = 0.85 * (1 - d.life / d.max);
+          ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+          return true;
+        });
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+  function newPiece(w, h, anywhere){
+    return { x:Math.random() * w, y:anywhere ? Math.random() * h : -10 - Math.random() * 40,
+      vy:40 + Math.random() * 70, sway:1 + Math.random() * 2, ph:Math.random() * 6, rot:Math.random() * 6,
+      spin:Math.random() * 6, vs:3 + Math.random() * 6, w:4 + Math.random() * 4, h:8 + Math.random() * 6,
+      col:CONFETTI[(Math.random() * CONFETTI.length) | 0] };
+  }
+  let fxLast = performance.now();
+  function fxLoop(now){
+    const dt = Math.min(0.05, (now - fxLast) / 1000); fxLast = now;
+    for (const host of liveHosts) { if (!host.isConnected) { liveHosts.delete(host); continue; } drawFx(host, dt); }
+    requestAnimationFrame(fxLoop);
+  }
+  requestAnimationFrame(fxLoop);
+
   /* ---------- Navigation ---------- */
   let path = [];          // node ids from Start to here
   let shotId = null;
@@ -190,6 +314,7 @@
     el.ask.dataset.start = n.start ? 'true' : 'false';
     el.askHeroImg.style.backgroundImage = `url("${IMG(n.img)}")`;
     el.askHeroImg.style.backgroundPosition = n.pos || 'center';
+    setFx(el.askHeroImg, n.img, coverGeo(el.askHeroImg, n.img, n.pos));
     // restart the camera move for each new screen
     el.askHero.dataset.motion = '';
     void el.askHero.offsetWidth;
@@ -199,8 +324,9 @@
     el.askBody.textContent = n.body;
     el.askQ.textContent = n.q;
     el.askOptions.innerHTML = n.options.map((o, i) => o.img
-      ? `<button class="opt" data-i="${i}"><span class="thumb" style="background-image:url('${IMG(o.img)}');background-position:${o.pos || 'center'}"></span><span class="lbl">${o.label}</span></button>`
+      ? `<button class="opt" data-i="${i}"><span class="thumb" data-img="${o.img}" data-pos="${o.pos || 'center'}" style="background-image:url('${IMG(o.img)}');background-position:${o.pos || 'center'}"></span><span class="lbl">${o.label}</span></button>`
       : `<button class="opt yn" data-i="${i}"><span class="lbl">${o.label}</span></button>`).join('');
+    el.askOptions.querySelectorAll('.thumb').forEach((t) => setFx(t, t.dataset.img, coverGeo(t, t.dataset.img, t.dataset.pos)));
     el.back.hidden = path.length <= 1;
     renderCrumbs();
     renderCollect();
@@ -252,6 +378,7 @@
     el.shutter.dataset.stage = 'idle';
     renderCrumbs('Take the shot');
     show('shoot');
+    setFx(el.vfImg, s.img, () => el.vfImg._geo);
     announce(`Take the shot. ${s.cam.join(', ')}. ${HINT}`);
   }
 
@@ -355,6 +482,7 @@
     show('result');
     requestAnimationFrame(() => {
       paint(el.printImg, el.printFrame, s, 0);
+      setFx(el.printImg, s.img, () => el.printImg._geo);
       // a weak shot prints a little flat
       if (s.grade === 'weak') el.printImg.style.filter = 'saturate(.75) contrast(.92)';
     });
