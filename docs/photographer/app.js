@@ -100,10 +100,10 @@
     crumbs:$('crumbs'), ask:$('ask'), shoot:$('shoot'), result:$('result'),
     askHero:$('askHero'), askHeroImg:$('askHeroImg'), askTag:$('askTag'), askTitle:$('askTitle'), askBody:$('askBody'), askQ:$('askQ'),
     askOptions:$('askOptions'), back:$('back'), collect:$('collect'),
-    shootTag:$('shootTag'), shootBody:$('shootBody'), vf:$('vf'), vfImg:$('vfImg'), af:$('af'),
-    modeTag:$('modeTag'), roShutter:$('roShutter'), roAp:$('roAp'), roLens:$('roLens'),
-    meterFill:$('meterFill'), focusWord:$('focusWord'), flash:$('flash'), hint:$('hint'),
-    shutter:$('shutter'), sound:$('sound'),
+    shootTag:$('shootTag'), shootBody:$('shootBody'), vf:$('vf'), vfImg:$('vfImg'), af:$('af'), afgrid:$('afgrid'),
+    ovf:$('ovf'), ovfShutter:$('ovfShutter'), ovfAp:$('ovfAp'), ovfShots:$('ovfShots'),
+    lcdShutter:$('lcdShutter'), lcdAp:$('lcdAp'), lcdDrive:$('lcdDrive'), lcdLens:$('lcdLens'),
+    flash:$('flash'), hint:$('hint'), shutter:$('shutter'), sound:$('sound'),
     printFrame:$('printFrame'), printImg:$('printImg'), resPath:$('resPath'), resStamp:$('resStamp'),
     resTitle:$('resTitle'), resText:$('resText'), resAction:$('resAction'), announce:$('announce'),
   };
@@ -154,7 +154,8 @@
     src.connect(f).connect(g).connect(a.destination);
     src.start(a.currentTime + at);
   }
-  const shutterSound = (at = 0) => { click(at, 0.04, 2400, 0.9); click(at + 0.06, 0.05, 1500, 0.7); };
+  // A DSLR frame: mirror flips up (low thump), the shutter curtains run (sharp tick), mirror drops back.
+  const shutterSound = (at = 0) => { click(at, 0.035, 700, 1.1); click(at + 0.012, 0.02, 3800, 0.6); click(at + 0.055, 0.04, 1100, 0.8); };
   function beep(){
     const a = audio(); if (!a) return;
     [0, 0.09].forEach((t) => {
@@ -215,8 +216,21 @@
   });
   el.back.addEventListener('click', () => { if (path.length > 1) { path.pop(); goNode(path[path.length - 1], false); } });
 
-  /* ---------- Taking the shot ---------- */
-  const live = { focus:0, holding:false, locked:false, firing:false };
+  /* ---------- Taking the shot (works like a DSLR) ----------
+     Half-press (hold the button or Space): the lens focuses on the active AF point.
+     Full press (push the button down, or Enter): takes the picture. The camera is in
+     focus priority (AF-S / One Shot), so a full press only fires once focus is locked;
+     a quick stab does both in one go. Letting go of a half-press cancels focus. */
+  const live = { focus:0, half:false, full:false, locked:false, firing:false, downAt:0, startY:0, t:0 };
+  let shotsLeft = 312;
+  const HINT = 'Half-press to focus, then press all the way to take the picture.';
+
+  // Etched AF points on the focusing screen (a 5 × 3 grid around the centre).
+  el.afgrid.innerHTML = [0.3,0.4,0.5,0.6,0.7].flatMap((x) => [0.36,0.5,0.64].map((y) =>
+    `<i style="left:${x*100}%;top:${y*100}%"></i>`)).join('');
+
+  const fmtShutter = (v) => v.replace('1/', '');            // viewfinders show 1/60 as "60"
+  const fmtAp = (v) => v.replace('f/', '').replace(/^(\d+)$/, '$1.0');
 
   function goShoot(id){
     shotId = id;
@@ -225,14 +239,20 @@
     el.af.style.left = `${s.af[0]*100}%`; el.af.style.top = `${s.af[1]*100}%`;
     el.shootTag.textContent = n.tag;
     el.shootBody.textContent = `${n.body} Lens: ${s.cam[2]}.`;
-    [el.roShutter.textContent, el.roAp.textContent, el.roLens.textContent] = s.cam;
-    el.modeTag.hidden = !s.burst;
-    el.hint.textContent = 'Hold the shutter (or Space) until it beeps, then let go.';
-    Object.assign(live, { focus:0, holding:false, locked:false, firing:false });
-    el.shutter.disabled = false;
+    const [sh, ap, lens] = s.cam;
+    el.ovfShutter.textContent = fmtShutter(sh);
+    el.ovfAp.textContent = fmtAp(ap);
+    el.lcdShutter.textContent = sh;
+    el.lcdAp.textContent = 'F' + fmtAp(ap);
+    el.lcdLens.textContent = lens;
+    el.lcdDrive.textContent = s.burst ? 'Burst · 10 fps' : 'Single';
+    el.ovfShots.textContent = shotsLeft;
+    el.hint.textContent = HINT;
+    Object.assign(live, { focus:0, half:false, full:false, locked:false, firing:false });
+    el.shutter.dataset.stage = 'idle';
     renderCrumbs('Take the shot');
     show('shoot');
-    announce(`Take the shot. ${s.cam.join(', ')}. Hold the shutter until it beeps, then let go.`);
+    announce(`Take the shot. ${s.cam.join(', ')}. ${HINT}`);
   }
 
   let last = performance.now();
@@ -240,55 +260,80 @@
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (mode === 'shoot' && !live.firing) {
       const s = SHOTS[shotId];
-      if (live.holding) live.focus = Math.min(1, live.focus + dt / 0.6);
-      else live.focus = Math.max(0, live.focus - dt / 0.5);
+      const focusing = live.half || live.full;
+      if (focusing) live.focus = Math.min(1, live.focus + dt / 0.55);
+      else live.focus = Math.max(0, live.focus - dt / 0.4);
       const locked = live.focus >= 0.98;
       if (locked && !live.locked) beep();
       live.locked = locked;
-      // Handheld sway (wider sideways on a panning shot), and the lens "breathes" as it focuses.
-      live.t = (live.t || 0) + dt;
+      // Handheld sway (wider sideways on a panning shot); the lens breathes as it racks focus.
+      live.t += dt;
       const t = live.t, pan = shotId.startsWith('panning') ? 2.2 : 1;
       const move = reduceMotion ? { x:0, y:0, z:1 } : {
         x: (0.006*Math.sin(t*1.3) + 0.003*Math.sin(t*3.7)) * pan,
         y: 0.004*Math.sin(t*1.1 + 1) + 0.002*Math.sin(t*4.3),
-        z: 1 + 0.04 * (1 - live.focus),
+        z: 1 + 0.035 * (1 - live.focus),
       };
       paint(el.vfImg, el.vf, s, (1 - live.focus) * 0.02, move);
-      el.af.dataset.state = locked ? 'lock' : live.holding ? 'hunt' : 'idle';
-      el.vf.dataset.focus = locked ? 'lock' : '';
-      el.meterFill.style.width = `${Math.round(live.focus * 100)}%`;
-      el.focusWord.textContent = locked ? 'AF ●' : live.holding ? 'AF…' : 'MF';
-      el.shutter.classList.toggle('held', live.holding);
-      el.shutter.classList.toggle('lock', locked);
+      const state = locked ? 'lock' : focusing ? 'hunt' : 'idle';
+      if (el.af.dataset.state !== state) el.af.dataset.state = state;
+      el.ovf.dataset.focus = state;
+      el.shutter.dataset.stage = live.full ? 'full' : live.half ? 'half' : 'idle';
+      if (locked && live.full) fire();
     }
     requestAnimationFrame(tick);
   }
 
-  function press(){ if (mode === 'shoot' && !live.firing) { audio(); live.holding = true; } }
-  function release(){
-    if (mode !== 'shoot' || !live.holding || live.firing) return;
-    live.holding = false;
-    if (!live.locked) { el.hint.textContent = 'Too early. Keep holding until you hear the beep.'; return; }
-    live.firing = true; el.shutter.disabled = true;
-    const s = SHOTS[shotId], n = s.burst ? 4 : 1, gap = 0.11;
-    for (let i = 0; i < n; i++) {
-      shutterSound(i * gap);
-      setTimeout(() => { el.flash.classList.remove('on'); void el.flash.offsetWidth; el.flash.classList.add('on'); }, i * gap * 1000);
-    }
-    setTimeout(showResult, (n * gap + 0.35) * 1000);
+  function halfPress(){ if (mode === 'shoot' && !live.firing) { audio(); live.half = true; el.hint.textContent = HINT; } }
+  function fullPress(){
+    if (mode !== 'shoot' || live.firing) return;
+    audio(); live.half = true; live.full = true;
+    if (!live.locked) el.hint.textContent = 'Focusing… the camera fires as soon as focus locks.';
+  }
+  function letGo(){
+    if (mode !== 'shoot' || live.firing || live.full) return;   // a full press always completes
+    live.half = false;
   }
 
-  el.shutter.addEventListener('pointerdown', (e) => { e.preventDefault(); el.shutter.setPointerCapture(e.pointerId); press(); });
-  el.shutter.addEventListener('pointerup', release);
-  el.shutter.addEventListener('pointercancel', () => { live.holding = false; });
+  function fire(){
+    live.firing = true;
+    const s = SHOTS[shotId], n = s.burst ? 6 : 1, gap = 0.1;   // burst at 10 frames per second
+    el.shutter.dataset.stage = 'full';
+    for (let i = 0; i < n; i++) {
+      shutterSound(i * gap);
+      setTimeout(() => {
+        el.flash.classList.remove('on'); void el.flash.offsetWidth; el.flash.classList.add('on');   // mirror-up blackout
+        el.ovf.classList.add('dark'); setTimeout(() => el.ovf.classList.remove('dark'), 80);
+        shotsLeft = Math.max(0, shotsLeft - 1); el.ovfShots.textContent = shotsLeft;
+      }, i * gap * 1000);
+    }
+    el.hint.textContent = n > 1 ? `${n} frames in burst.` : 'Frame taken.';
+    setTimeout(showResult, (n * gap + 0.45) * 1000);
+  }
+
+  // Pointer: press and hold = half-press. Push down (drag down) = full press. A quick stab = full press.
+  el.shutter.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); el.shutter.setPointerCapture(e.pointerId);
+    live.downAt = performance.now(); live.startY = e.clientY; halfPress();
+  });
+  el.shutter.addEventListener('pointermove', (e) => {
+    if (live.half && !live.full && e.clientY - live.startY > 10) fullPress();
+  });
+  el.shutter.addEventListener('pointerup', () => {
+    if (live.half && !live.full && performance.now() - live.downAt < 220) fullPress(); else letGo();
+  });
+  el.shutter.addEventListener('pointercancel', letGo);
   el.shutter.addEventListener('contextmenu', (e) => e.preventDefault());
+  el.shutter.addEventListener('click', (e) => e.preventDefault());
   document.addEventListener('keydown', (e) => {
-    if (mode === 'shoot' && (e.key === ' ' || e.key === 'Enter') && e.target !== el.sound) { e.preventDefault(); if (!e.repeat) press(); }
+    if (mode !== 'shoot' || e.target === el.sound || e.repeat) return;
+    if (e.key === ' ') { e.preventDefault(); halfPress(); }
+    else if (e.key === 'Enter') { e.preventDefault(); fullPress(); }
   });
   document.addEventListener('keyup', (e) => {
-    if (mode === 'shoot' && (e.key === ' ' || e.key === 'Enter') && e.target !== el.sound) { e.preventDefault(); release(); }
+    if (mode === 'shoot' && e.key === ' ' && e.target !== el.sound) { e.preventDefault(); letGo(); }
   });
-  window.addEventListener('blur', () => { live.holding = false; });
+  window.addEventListener('blur', letGo);
   el.sound.addEventListener('click', () => {
     soundOn = !soundOn;
     el.sound.setAttribute('aria-pressed', String(soundOn));

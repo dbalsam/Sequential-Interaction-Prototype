@@ -29,25 +29,43 @@
     <span class="tag inline" id="shootTag"></span>
     <h2 id="shootTitle">Take the shot</h2>
     <p class="body" id="shootBody"></p>
-    <div class="vf-wrap">
-      <div class="vf" id="vf" aria-hidden="true">
-        <div class="vf-img" id="vfImg"></div>
-        <div class="grain"></div>
-        <div class="thirds"></div>
-        <div class="corners"><i></i><i></i><i></i><i></i></div>
-        <div class="af" id="af" data-state="idle"></div>
-        <div class="mode-tag" id="modeTag" hidden>Burst</div>
-        <div class="readout">
-          <span id="roShutter"></span><span id="roAp"></span><span id="roLens"></span>
-          <span class="meter"><span id="meterFill"></span></span>
-          <span id="focusWord">MF</span>
+    <div class="camera">
+      <!-- Looking through the optical viewfinder -->
+      <div class="eyepiece">
+        <div class="vf" id="vf" aria-hidden="true">
+          <div class="vf-img" id="vfImg"></div>
+          <div class="grain"></div>
+          <div class="afgrid" id="afgrid"></div>
+          <div class="af" id="af" data-state="idle"><i></i><i></i><i></i><i></i></div>
+          <div class="flash" id="flash"></div>
         </div>
-        <div class="flash" id="flash"></div>
+        <div class="ovf" id="ovf" aria-hidden="true">
+          <span class="fc" id="ovfFocus">●</span>
+          <span id="ovfShutter">60</span>
+          <span id="ovfAp">8.0</span>
+          <span class="scale">−..2..1..<b id="ovfNeedle">▲</b>..1..2..+</span>
+          <span>ISO 200</span>
+          <span class="shots">[<b id="ovfShots">312</b>]</span>
+        </div>
+      </div>
+      <!-- The camera's top plate: status LCD, mode dial, two-stage shutter button -->
+      <div class="topplate">
+        <div class="lcd" aria-hidden="true">
+          <span class="lcd-mode">M</span>
+          <span class="lcd-big" id="lcdShutter">1/60</span>
+          <span class="lcd-big" id="lcdAp">F8.0</span>
+          <span id="lcdDrive">Single</span>
+          <span id="lcdLens">400mm</span>
+          <span>ISO 200</span>
+          <span>AF-S · ONE SHOT</span>
+        </div>
+        <div class="dial" aria-hidden="true"><span>M</span></div>
+        <button class="release" id="shutter" data-stage="idle" aria-label="Shutter button. Hold to half-press and focus. Press Enter, or push down, to take the picture."><span class="cap"></span></button>
       </div>
     </div>
-    <div class="controls">
-      <p class="hint" id="hint">Hold the shutter (or Space) until it beeps, then let go.</p>
-      <button class="shutter" id="shutter" aria-label="Shutter. Hold to focus, release to shoot."><span></span></button>
+    <p class="hint" id="hint"></p>
+    <div class="row keys">
+      <span class="legend"><kbd>Hold</kbd> half-press to focus <kbd>Push down</kbd> full press to shoot <span class="kb">· Keys: <kbd>Space</kbd> half, <kbd>Enter</kbd> full</span></span>
       <button class="ghost small" id="sound" aria-pressed="true">Sound on</button>
     </div>
   </section>
