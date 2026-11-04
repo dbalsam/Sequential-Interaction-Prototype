@@ -9,54 +9,54 @@
 
 (() => {
   'use strict';
-  const IMG = (n) => `img/${String(n).padStart(2, '0')}.jpg`;
+  const IMG = (n) => `img/${n}.jpg`;
 
   // ---------- Decision screens (copy from the Figma cards) ----------
   const NODES = {
     start: {
-      crumb:'Start', tag:'Media pass · No. 270', img:1, start:true,
+      crumb:'Start', tag:'Media pass · No. 270', img:'race-field', start:true,
       title:'You’re a race photographer',
       body:'One race weekend, one camera bag. Every choice you make decides what ends up on the memory card.',
       q:'What moment do you want to capture?',
-      options:[ { label:'Trackside', to:'trackside', img:6 }, { label:'Possible Podium', to:'podium', img:10 } ],
+      options:[ { label:'Trackside', to:'trackside', img:'f1-panning' }, { label:'Possible Podium', to:'podium', img:'nurburgring-podium' } ],
     },
     trackside: {
-      crumb:'Trackside', tag:'Trackside', img:9,
+      crumb:'Trackside', tag:'Trackside', img:'f1-panning',
       title:'Trackside',
       body:'Cars are coming through at full speed. You get one pass at this.',
       q:'What type of settings do I need?',
-      options:[ { label:'Panning Shot', to:'panning', img:2 }, { label:'Sharp Action Shot', to:'sharp', img:8 } ],
+      options:[ { label:'Panning Shot', to:'panning', img:'astemo-panning' }, { label:'Sharp Action Shot', to:'sharp', img:'corner' } ],
     },
     panning: {
-      crumb:'Panning shot', tag:'Trackside · Panning shot', img:7,
+      crumb:'Panning shot', tag:'Trackside · Panning shot', img:'astemo-panning',
       title:'Panning shot',
       body:'Track smoothly. Use a slower shutter speed to follow the car’s movement.',
       q:'Do you have a long telephoto lens?',
       options:[ { label:'Yes', shot:'panningGreat' }, { label:'No', shot:'panningWeak' } ],
     },
     sharp: {
-      crumb:'Sharp action shot', tag:'Trackside · Sharp action', img:8,
+      crumb:'Sharp action shot', tag:'Trackside · Sharp action', img:'corner',
       title:'Sharp action shot',
       body:'Faster shutter speed. Use burst mode.',
       q:'Do you have a long telephoto lens?',
       options:[ { label:'Yes', shot:'sharpGreat' }, { label:'No', shot:'sharpWeak' } ],
     },
     podium: {
-      crumb:'Podium', tag:'Possible podium', img:10,
+      crumb:'Podium', tag:'Possible podium', img:'podium-champagne',
       title:'Possible podium',
       body:'The race is over and the celebrations are starting. It’s crowded and it’s chaotic.',
       q:'Who should I focus on?',
-      options:[ { label:'The Team', to:'team', img:5 }, { label:'Driver', to:'driver', img:3 } ],
+      options:[ { label:'The Team', to:'team', img:'team-confetti' }, { label:'Driver', to:'driver', img:'driver-helmet', pos:'center 25%' } ],
     },
     team: {
-      crumb:'Team', tag:'Podium · Team', img:4,
+      crumb:'Team', tag:'Podium · Team', img:'pit-crew',
       title:'Team',
       body:'Faster shutter speed and burst mode to capture the chaos.',
       q:'Can you fit the entire team in the frame?',
       options:[ { label:'Yes', shot:'teamGreat' }, { label:'No', shot:'teamWeak' } ],
     },
     driver: {
-      crumb:'Driver', tag:'Podium · Driver', img:3,
+      crumb:'Driver', tag:'Podium · Driver', img:'driver-helmet', pos:'center 22%',
       title:'Driver',
       body:'Switch to a shorter lens and a smaller f-stop in time.',
       q:'Do you have the right settings and lens?',
@@ -68,28 +68,28 @@
   // img/zoom/c: which photo the viewfinder sees, how far it's zoomed in, and where it's centred.
   // af: where the focus box sits in the frame. cam: shutter, aperture, lens.
   const SHOTS = {
-    panningGreat: { grade:'great', img:2, zoom:1.05, c:[0.5,0.58], af:[0.4,0.6],
+    panningGreat: { grade:'great', img:'astemo-panning', zoom:1.15, c:[0.58,0.62], af:[0.54,0.47],
       cam:['1/60','f/8','400mm'], burst:false,
       text:'The car is sharp, background has motion blur.', action:'Your photo gets reposted' },
-    panningWeak:  { grade:'weak', img:6, zoom:1, c:[0.5,0.5], af:[0.5,0.6],
+    panningWeak:  { grade:'weak', img:'weak-tiny-car', zoom:1, c:[0.5,0.5], af:[0.5,0.6],
       cam:['1/60','f/8','70mm'], burst:false,
       text:'The car is a tiny dot.', action:'Might as well have not shot it' },
-    sharpGreat:   { grade:'great', img:8, zoom:1.5, c:[0.45,0.5], af:[0.47,0.5],
+    sharpGreat:   { grade:'great', img:'corner', zoom:1.5, c:[0.42,0.56], af:[0.46,0.45],
       cam:['1/2000','f/4','400mm'], burst:true,
       text:'Frozen mid-corner: every detail of the car is crisp.', action:'Your photo gets reposted' },
-    sharpWeak:    { grade:'weak', img:9, zoom:1, c:[0.5,0.5], af:[0.31,0.64],
+    sharpWeak:    { grade:'weak', img:'weak-wide-turn', zoom:1, c:[0.5,0.5], af:[0.31,0.64],
       cam:['1/2000','f/4','70mm'], burst:true,
       text:'The car is a tiny dot.', action:'Might as well have not shot it' },
-    teamGreat:    { grade:'great', img:5, zoom:1, c:[0.5,0.5], af:[0.5,0.4],
+    teamGreat:    { grade:'great', img:'team-confetti', zoom:1, c:[0.5,0.5], af:[0.5,0.35],
       cam:['1/1000','f/5.6','24mm'], burst:true,
       text:'The whole team is visible and the composition captures the celebration.', action:'Your photograph gets noticed by the team and they want to hire you!' },
-    teamWeak:     { grade:'weak', img:5, zoom:2.6, c:[0.5,0.42], af:[0.5,0.5],
+    teamWeak:     { grade:'weak', img:'team-confetti', zoom:2.6, c:[0.5,0.55], af:[0.5,0.5],
       cam:['1/1000','f/5.6','200mm'], burst:true,
       text:'Team members are cropped out. The lens wasn’t wide enough.', action:'Throw away image' },
-    driverGreat:  { grade:'great', img:3, zoom:1.15, c:[0.5,0.36], af:[0.5,0.3], ar:2/3,
+    driverGreat:  { grade:'great', img:'driver-champagne', zoom:1.15, c:[0.48,0.45], af:[0.27,0.3],
       cam:['1/1000','f/2.8','85mm'], burst:false,
       text:'The driver is sharp, background is clean, subject stands out.', action:'Your photo is used for advertisement worldwide' },
-    driverWeak:   { grade:'weak', img:10, zoom:1, c:[0.5,0.5], af:[0.62,0.3],
+    driverWeak:   { grade:'weak', img:'nurburgring-podium', zoom:1, c:[0.5,0.5], af:[0.62,0.3],
       cam:['1/250','f/11','70mm'], burst:false,
       text:'Busy background, can’t tell what the focus is.', action:'Are you even a motorsports photographer at this point ;(' },
   };
@@ -188,12 +188,13 @@
     const n = NODES[id];
     el.ask.dataset.start = n.start ? 'true' : 'false';
     el.askHero.style.backgroundImage = `url("${IMG(n.img)}")`;
+    el.askHero.style.backgroundPosition = n.pos || 'center';
     el.askTag.textContent = n.tag;
     el.askTitle.textContent = n.title;
     el.askBody.textContent = n.body;
     el.askQ.textContent = n.q;
     el.askOptions.innerHTML = n.options.map((o, i) => o.img
-      ? `<button class="opt" data-i="${i}"><span class="thumb" style="background-image:url('${IMG(o.img)}')"></span><span class="lbl">${o.label}</span></button>`
+      ? `<button class="opt" data-i="${i}"><span class="thumb" style="background-image:url('${IMG(o.img)}');background-position:${o.pos || 'center'}"></span><span class="lbl">${o.label}</span></button>`
       : `<button class="opt yn" data-i="${i}"><span class="lbl">${o.label}</span></button>`).join('');
     el.back.hidden = path.length <= 1;
     renderCrumbs();
@@ -306,12 +307,13 @@
   el.resAction.addEventListener('click', () => { path = []; goNode('start'); });
 
   /* ---------- Load ---------- */
-  // Read each photo's real size, so higher-resolution exports can be dropped in with the same names.
-  Promise.all(Array.from({ length:10 }, (_, i) => new Promise((res) => {
+  // Read each photo's real size, so a photo can be swapped for another saved under the same name.
+  const names = [...new Set(Object.values(SHOTS).map((s) => s.img))];
+  Promise.all(names.map((name) => new Promise((res) => {
     const im = new Image();
-    im.onload = () => { sizes[i + 1] = { w:im.naturalWidth, h:im.naturalHeight }; res(); };
-    im.onerror = () => { sizes[i + 1] = { w:1500, h:1000 }; res(); };
-    im.src = IMG(i + 1);
+    im.onload = () => { sizes[name] = { w:im.naturalWidth, h:im.naturalHeight }; res(); };
+    im.onerror = () => { sizes[name] = { w:1500, h:1000 }; res(); };
+    im.src = IMG(name);
   }))).then(() => {
     goNode('start');
     requestAnimationFrame(tick);

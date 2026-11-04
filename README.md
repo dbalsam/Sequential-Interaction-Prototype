@@ -21,7 +21,7 @@ Follows the Week 7 Figma flow (*Motorsports Photographer*). It's a branching seq
 
 Between the last answer and the result you take the shot: the viewfinder shows the framing your lens choice gives you, with the settings in the readout. Hold the shutter (or Space) until it beeps, then let go. Burst-mode paths fire four frames. The start screen counts how many of the 8 shots you've found (saved in this browser).
 
-Files: `docs/photographer/index.html`, `style.css`, `app.js`, and `img/01.jpg` to `img/10.jpg`. The photos were cut from a screenshot of the Figma board, so they're low resolution. To sharpen them, export the originals from Figma and save them over `img/01.jpg` … `img/10.jpg` with the same names (any size works; the code reads each image's real size).
+Files: `docs/photographer/index.html`, `style.css`, `app.js`, and the photos in `docs/photographer/img/` (named by what they show, e.g. `astemo-panning.jpg`, `team-confetti.jpg`). To swap a photo, save a new one over it with the same name; the code reads each photo's real size. `weak-tiny-car.jpg` and `weak-wide-turn.jpg` are still low-resolution crops from the Figma screenshot.
 
 ## Pit stop training drill
 
