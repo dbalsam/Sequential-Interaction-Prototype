@@ -19,6 +19,8 @@ Follows the Week 7 Figma flow (*Motorsports Photographer*). It's a branching seq
     - **The Team**: fast shutter, burst mode. Can you fit the whole team? Yes = Great shot (they want to hire you), No = Weak shot (team cropped out).
     - **Driver**: shorter lens, smaller f-stop. Right settings and lens? Yes = Great shot (used for advertising worldwide), No = Weak shot (busy background).
 
+The photos move: trackside screens pan sideways like a camera following a car, the others push in slowly, and the viewfinder sways like a handheld camera. Turning on "reduce motion" on your device stops all of it.
+
 Between the last answer and the result you take the shot: the viewfinder shows the framing your lens choice gives you, with the settings in the readout. Hold the shutter (or Space) until it beeps, then let go. Burst-mode paths fire four frames. The start screen counts how many of the 8 shots you've found (saved in this browser).
 
 Files: `docs/photographer/index.html`, `style.css`, `app.js`, and the photos in `docs/photographer/img/` (named by what they show, e.g. `astemo-panning.jpg`, `team-confetti.jpg`). To swap a photo, save a new one over it with the same name; the code reads each photo's real size. `weak-tiny-car.jpg` and `weak-wide-turn.jpg` are still low-resolution crops from the Figma screenshot.

@@ -21,21 +21,21 @@
       options:[ { label:'Trackside', to:'trackside', img:'f1-panning' }, { label:'Possible Podium', to:'podium', img:'nurburgring-podium' } ],
     },
     trackside: {
-      crumb:'Trackside', tag:'Trackside', img:'f1-panning',
+      crumb:'Trackside', tag:'Trackside', motion:'pan', img:'f1-panning',
       title:'Trackside',
       body:'Cars are coming through at full speed. You get one pass at this.',
       q:'What type of settings do I need?',
       options:[ { label:'Panning Shot', to:'panning', img:'astemo-panning' }, { label:'Sharp Action Shot', to:'sharp', img:'corner' } ],
     },
     panning: {
-      crumb:'Panning shot', tag:'Trackside · Panning shot', img:'astemo-panning',
+      crumb:'Panning shot', motion:'pan', tag:'Trackside · Panning shot', img:'astemo-panning',
       title:'Panning shot',
       body:'Track smoothly. Use a slower shutter speed to follow the car’s movement.',
       q:'Do you have a long telephoto lens?',
       options:[ { label:'Yes', shot:'panningGreat' }, { label:'No', shot:'panningWeak' } ],
     },
     sharp: {
-      crumb:'Sharp action shot', tag:'Trackside · Sharp action', img:'corner',
+      crumb:'Sharp action shot', motion:'pan', tag:'Trackside · Sharp action', img:'corner',
       title:'Sharp action shot',
       body:'Faster shutter speed. Use burst mode.',
       q:'Do you have a long telephoto lens?',
@@ -98,7 +98,7 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     crumbs:$('crumbs'), ask:$('ask'), shoot:$('shoot'), result:$('result'),
-    askHero:$('askHero'), askTag:$('askTag'), askTitle:$('askTitle'), askBody:$('askBody'), askQ:$('askQ'),
+    askHero:$('askHero'), askHeroImg:$('askHeroImg'), askTag:$('askTag'), askTitle:$('askTitle'), askBody:$('askBody'), askQ:$('askQ'),
     askOptions:$('askOptions'), back:$('back'), collect:$('collect'),
     shootTag:$('shootTag'), shootBody:$('shootBody'), vf:$('vf'), vfImg:$('vfImg'), af:$('af'),
     modeTag:$('modeTag'), roShutter:$('roShutter'), roAp:$('roAp'), roLens:$('roLens'),
@@ -122,13 +122,13 @@
   }
 
   /* ---------- Painting a crop ---------- */
-  function paint(layer, frame, shot, blurFrac){
+  function paint(layer, frame, shot, blurFrac, move = { x:0, y:0, z:1 }){
     const fw = frame.clientWidth, fh = frame.clientHeight;
     const pad = (layer.offsetWidth - fw) / 2;
     const { w, h } = sizes[shot.img];
-    const s = Math.max(fw / w, fh / h) * shot.zoom, W = w * s, H = h * s;
-    const cx = Math.min(1 - fw/2/W, Math.max(fw/2/W, shot.c[0]));
-    const cy = Math.min(1 - fh/2/H, Math.max(fh/2/H, shot.c[1]));
+    const s = Math.max(fw / w, fh / h) * shot.zoom * move.z, W = w * s, H = h * s;
+    const cx = Math.min(1 - fw/2/W, Math.max(fw/2/W, shot.c[0])) + move.x * fw / W;
+    const cy = Math.min(1 - fh/2/H, Math.max(fh/2/H, shot.c[1])) + move.y * fw / H;
     layer.style.backgroundImage = `url("${IMG(shot.img)}")`;
     layer.style.backgroundSize = `${W}px ${H}px`;
     layer.style.backgroundPosition = `${pad + fw/2 - cx*W}px ${pad + fh/2 - cy*H}px`;
@@ -187,8 +187,12 @@
     if (push) path.push(id);
     const n = NODES[id];
     el.ask.dataset.start = n.start ? 'true' : 'false';
-    el.askHero.style.backgroundImage = `url("${IMG(n.img)}")`;
-    el.askHero.style.backgroundPosition = n.pos || 'center';
+    el.askHeroImg.style.backgroundImage = `url("${IMG(n.img)}")`;
+    el.askHeroImg.style.backgroundPosition = n.pos || 'center';
+    // restart the camera move for each new screen
+    el.askHero.dataset.motion = '';
+    void el.askHero.offsetWidth;
+    el.askHero.dataset.motion = n.motion || 'push';
     el.askTag.textContent = n.tag;
     el.askTitle.textContent = n.title;
     el.askBody.textContent = n.body;
@@ -241,7 +245,15 @@
       const locked = live.focus >= 0.98;
       if (locked && !live.locked) beep();
       live.locked = locked;
-      paint(el.vfImg, el.vf, s, (1 - live.focus) * 0.02);
+      // Handheld sway (wider sideways on a panning shot), and the lens "breathes" as it focuses.
+      live.t = (live.t || 0) + dt;
+      const t = live.t, pan = shotId.startsWith('panning') ? 2.2 : 1;
+      const move = reduceMotion ? { x:0, y:0, z:1 } : {
+        x: (0.006*Math.sin(t*1.3) + 0.003*Math.sin(t*3.7)) * pan,
+        y: 0.004*Math.sin(t*1.1 + 1) + 0.002*Math.sin(t*4.3),
+        z: 1 + 0.04 * (1 - live.focus),
+      };
+      paint(el.vfImg, el.vf, s, (1 - live.focus) * 0.02, move);
       el.af.dataset.state = locked ? 'lock' : live.holding ? 'hunt' : 'idle';
       el.vf.dataset.focus = locked ? 'lock' : '';
       el.meterFill.style.width = `${Math.round(live.focus * 100)}%`;
