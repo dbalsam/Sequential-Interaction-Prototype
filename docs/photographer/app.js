@@ -1,123 +1,142 @@
 /* Trackside: a motorsports photographer experience.
-   One linear sequence of ten frames. Each frame: pan the viewfinder to put the
-   subject in the focus point, hold the shutter to focus, release to shoot.
-   Captions (title + Context / Theme) come from the Week 7 Figma board. */
+   Follows the Week 7 Figma flow:
+     Start ─ Trackside ─ Panning shot ─ telephoto? ─ Yes: Great shot / No: Weak shot
+                       └ Sharp action ─ telephoto? ─ Yes: Great shot / No: Weak shot
+           └ Podium ─── Team ─ whole team fits?     ─ Yes: Great shot / No: Weak shot
+                       └ Driver ─ right settings?   ─ Yes: Great shot / No: Weak shot
+   Every result card's button returns to Start. Between the last answer and the result
+   you take the shot in the viewfinder, with the settings and lens you chose. */
 
 (() => {
   'use strict';
+  const IMG = (n) => `img/${String(n).padStart(2, '0')}.jpg`;
 
-  // target: where the subject sits in the photo, as fractions of width/height.
-  // af: where the focus point sits in the viewfinder (rule-of-thirds lines), as fractions of the frame.
-  //     Moving cars sit on the left third so they have room to drive into.
-  // drift: moving cars keep sliding forward through the frame (frame widths per second).
-  const SHOTS = [
-    { file:'img/01.jpg', session:'Arrival',
-      title:'Race field approaching the pit straight',
-      brief:'Wide establishing shot. Put the leading pack in the focus point.',
-      label:'Context', text:'Establishes the racing environment and the pressure of an approaching pit stop.',
-      target:[0.30,0.72], af:[0.333,0.667], zoom:1.45, exp:['1/800','f/5.6'] },
-    { file:'img/02.jpg', session:'Arrival',
-      title:'Blue-and-red GT car',
-      brief:'The #270 car is coming past. Pan with it and keep the door number in the point.',
-      label:'Context', text:'Introduces the vehicle at the center of the interaction.',
-      target:[0.38,0.62], af:[0.333,0.5], zoom:1.6, drift:0.16, exp:['1/125','f/8'] },
-    { file:'img/03.jpg', session:'Arrival', ar:2/3,
-      title:'Driver preparing between sessions',
-      brief:'Portrait. Get the helmet visor in the point before the driver turns away.',
-      label:'Context', text:'Establishes the human stakes behind the decisions made by the crew.',
-      target:[0.50,0.22], af:[0.5,0.3], zoom:1.5, exp:['1/1000','f/2.8'] },
-    { file:'img/04.jpg', session:'Pit lane',
-      title:'Pit crew at work',
-      brief:'The stop is live. Focus on the front tire as the gun goes on.',
-      label:'Conceptual themes', text:'Represents the choice between a full-service stop and a faster tire-only stop.',
-      target:[0.23,0.70], af:[0.333,0.667], zoom:1.6, exp:['1/2000','f/4'] },
-    { file:'img/05.jpg', session:'Pit lane',
-      title:'Team communication',
-      brief:'Crew leaning into the cockpit. Put the driver’s helmet in the point.',
-      label:'Conceptual themes', text:'Represents coordination, information-sharing, and choosing a response under pressure.',
-      target:[0.50,0.32], af:[0.5,0.4], zoom:1.6, exp:['1/1600','f/4'] },
-    { file:'img/06.jpg', session:'Trackside',
-      title:'Race car captured in motion',
-      brief:'Shooting through the trees. Track the car and hold it in the point.',
-      label:'Conceptual themes', text:'Communicates urgency and the limited time to make a decision.',
-      target:[0.50,0.60], af:[0.333,0.5], zoom:1.7, drift:0.2, exp:['1/60','f/11'] },
-    { file:'img/07.jpg', session:'Trackside',
-      title:'Speed and visual pressure',
-      brief:'Low and fast on the straight. Pan with the red car.',
-      label:'Conceptual themes', text:'Connects the speed of the race to the consequences of delays and mistakes.',
-      target:[0.38,0.56], af:[0.333,0.5], zoom:1.6, drift:0.24, exp:['1/80','f/9'] },
-    { file:'img/08.jpg', session:'Trackside',
-      title:'Car navigating a corner',
-      brief:'From above the apex. Put the car in the point as it clips the curb.',
-      label:'Visual themes', text:'Provides a strong angle, track geometry, and visual direction for framing.',
-      target:[0.43,0.50], af:[0.5,0.5], zoom:1.6, drift:0.14, exp:['1/250','f/7.1'] },
-    { file:'img/09.jpg', session:'Trackside',
-      title:'Car dropping through the downhill turn',
-      brief:'Elevation change. Focus on the car committing to its line.',
-      label:'Visual themes', text:'Uses elevation and track shape to show a car committing to its line.',
-      target:[0.31,0.64], af:[0.333,0.667], zoom:1.6, exp:['1/1000','f/5.6'] },
-    { file:'img/10.jpg', session:'Podium',
-      title:'Nürburgring podium celebration',
-      brief:'The finish. Put the driver celebrating on the podium in the point.',
-      label:'Visual themes', text:'The payoff: the result every decision in the sequence was building toward.',
-      target:[0.35,0.55], af:[0.5,0.5], zoom:1.5, exp:['1/500','f/4'] },
-  ];
-
-  const NOTES = {
-    keeper:'Sharp, and the subject sits right on the point. That’s the frame the team will use.',
-    usable:'In focus, but the subject is drifting off the point. Usable with a crop.',
-    soft:'Focus never locked on the subject. Soft frame.',
-    softMotion:'The car slid out of the point while you were focusing. Keep panning until you let go.',
-    missed:'Fired before the lens found focus. Nothing’s sharp.',
+  // ---------- Decision screens (copy from the Figma cards) ----------
+  const NODES = {
+    start: {
+      crumb:'Start', tag:'Media pass · No. 270', img:1, start:true,
+      title:'You’re a race photographer',
+      body:'One race weekend, one camera bag. Every choice you make decides what ends up on the memory card.',
+      q:'What moment do you want to capture?',
+      options:[ { label:'Trackside', to:'trackside', img:6 }, { label:'Possible Podium', to:'podium', img:10 } ],
+    },
+    trackside: {
+      crumb:'Trackside', tag:'Trackside', img:9,
+      title:'Trackside',
+      body:'Cars are coming through at full speed. You get one pass at this.',
+      q:'What type of settings do I need?',
+      options:[ { label:'Panning Shot', to:'panning', img:2 }, { label:'Sharp Action Shot', to:'sharp', img:8 } ],
+    },
+    panning: {
+      crumb:'Panning shot', tag:'Trackside · Panning shot', img:7,
+      title:'Panning shot',
+      body:'Track smoothly. Use a slower shutter speed to follow the car’s movement.',
+      q:'Do you have a long telephoto lens?',
+      options:[ { label:'Yes', shot:'panningGreat' }, { label:'No', shot:'panningWeak' } ],
+    },
+    sharp: {
+      crumb:'Sharp action shot', tag:'Trackside · Sharp action', img:8,
+      title:'Sharp action shot',
+      body:'Faster shutter speed. Use burst mode.',
+      q:'Do you have a long telephoto lens?',
+      options:[ { label:'Yes', shot:'sharpGreat' }, { label:'No', shot:'sharpWeak' } ],
+    },
+    podium: {
+      crumb:'Podium', tag:'Possible podium', img:10,
+      title:'Possible podium',
+      body:'The race is over and the celebrations are starting. It’s crowded and it’s chaotic.',
+      q:'Who should I focus on?',
+      options:[ { label:'The Team', to:'team', img:5 }, { label:'Driver', to:'driver', img:3 } ],
+    },
+    team: {
+      crumb:'Team', tag:'Podium · Team', img:4,
+      title:'Team',
+      body:'Faster shutter speed and burst mode to capture the chaos.',
+      q:'Can you fit the entire team in the frame?',
+      options:[ { label:'Yes', shot:'teamGreat' }, { label:'No', shot:'teamWeak' } ],
+    },
+    driver: {
+      crumb:'Driver', tag:'Podium · Driver', img:3,
+      title:'Driver',
+      body:'Switch to a shorter lens and a smaller f-stop in time.',
+      q:'Do you have the right settings and lens?',
+      options:[ { label:'Yes, I’m prepared', shot:'driverGreat' }, { label:'No', shot:'driverWeak' } ],
+    },
   };
-  const GRADE_WORD = { keeper:'Keeper', usable:'Usable', soft:'Soft', missed:'Missed' };
+
+  // ---------- Shots and their results ----------
+  // img/zoom/c: which photo the viewfinder sees, how far it's zoomed in, and where it's centred.
+  // af: where the focus box sits in the frame. cam: shutter, aperture, lens.
+  const SHOTS = {
+    panningGreat: { grade:'great', img:2, zoom:1.05, c:[0.5,0.58], af:[0.4,0.6],
+      cam:['1/60','f/8','400mm'], burst:false,
+      text:'The car is sharp, background has motion blur.', action:'Your photo gets reposted' },
+    panningWeak:  { grade:'weak', img:6, zoom:1, c:[0.5,0.5], af:[0.5,0.6],
+      cam:['1/60','f/8','70mm'], burst:false,
+      text:'The car is a tiny dot.', action:'Might as well have not shot it' },
+    sharpGreat:   { grade:'great', img:8, zoom:1.5, c:[0.45,0.5], af:[0.47,0.5],
+      cam:['1/2000','f/4','400mm'], burst:true,
+      text:'Frozen mid-corner: every detail of the car is crisp.', action:'Your photo gets reposted' },
+    sharpWeak:    { grade:'weak', img:9, zoom:1, c:[0.5,0.5], af:[0.31,0.64],
+      cam:['1/2000','f/4','70mm'], burst:true,
+      text:'The car is a tiny dot.', action:'Might as well have not shot it' },
+    teamGreat:    { grade:'great', img:5, zoom:1, c:[0.5,0.5], af:[0.5,0.4],
+      cam:['1/1000','f/5.6','24mm'], burst:true,
+      text:'The whole team is visible and the composition captures the celebration.', action:'Your photograph gets noticed by the team and they want to hire you!' },
+    teamWeak:     { grade:'weak', img:5, zoom:2.6, c:[0.5,0.42], af:[0.5,0.5],
+      cam:['1/1000','f/5.6','200mm'], burst:true,
+      text:'Team members are cropped out. The lens wasn’t wide enough.', action:'Throw away image' },
+    driverGreat:  { grade:'great', img:3, zoom:1.15, c:[0.5,0.36], af:[0.5,0.3], ar:2/3,
+      cam:['1/1000','f/2.8','85mm'], burst:false,
+      text:'The driver is sharp, background is clean, subject stands out.', action:'Your photo is used for advertisement worldwide' },
+    driverWeak:   { grade:'weak', img:10, zoom:1, c:[0.5,0.5], af:[0.62,0.3],
+      cam:['1/250','f/11','70mm'], burst:false,
+      text:'Busy background, can’t tell what the focus is.', action:'Are you even a motorsports photographer at this point ;(' },
+  };
+  const ALL_SHOTS = Object.keys(SHOTS);
 
   const $ = (id) => document.getElementById(id);
   const el = {
-    intro:$('intro'), shoot:$('shoot'), sheet:$('sheet'), begin:$('begin'),
-    roll:$('roll'), session:$('session'), counter:$('counter'), title:$('shotTitle'), brief:$('brief'),
-    vf:$('vf'), vfImg:$('vfImg'), af:$('af'), motionTag:$('motionTag'), meterFill:$('meterFill'),
-    focusWord:$('focusWord'), exp:$('exp'), ap:$('ap'), flash:$('flash'), hint:$('hint'),
-    shutter:$('shutter'), sound:$('sound'), announce:$('announce'),
-    contact:$('contact'), tally:$('tally'), again:$('again'),
-    print:$('print'), printImg:$('printImg'), printNo:$('printNo'), printStamp:$('printStamp'),
-    printTitle:$('printTitle'), printNote:$('printNote'), printLabel:$('printLabel'), printText:$('printText'),
-    reshoot:$('reshoot'), next:$('next'),
+    crumbs:$('crumbs'), ask:$('ask'), shoot:$('shoot'), result:$('result'),
+    askHero:$('askHero'), askTag:$('askTag'), askTitle:$('askTitle'), askBody:$('askBody'), askQ:$('askQ'),
+    askOptions:$('askOptions'), back:$('back'), collect:$('collect'),
+    shootTag:$('shootTag'), shootBody:$('shootBody'), vf:$('vf'), vfImg:$('vfImg'), af:$('af'),
+    modeTag:$('modeTag'), roShutter:$('roShutter'), roAp:$('roAp'), roLens:$('roLens'),
+    meterFill:$('meterFill'), focusWord:$('focusWord'), flash:$('flash'), hint:$('hint'),
+    shutter:$('shutter'), sound:$('sound'),
+    printFrame:$('printFrame'), printImg:$('printImg'), resPath:$('resPath'), resStamp:$('resStamp'),
+    resTitle:$('resTitle'), resText:$('resText'), resAction:$('resAction'), announce:$('announce'),
   };
-
-  function afName([x, y]){
-    const h = x < 0.45 ? 'left third' : x > 0.55 ? 'right third' : '';
-    const v = y < 0.45 ? 'upper third' : y > 0.55 ? 'lower third' : '';
-    if (h && v) return `${v.split(' ')[0]}-${h}`;
-    return h || v || 'center';
-  }
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const pad2 = (n) => String(n).padStart(2,'0');
-  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const sizes = {};   // natural image sizes, read at load
 
-  /* ---------- Image geometry ---------- */
-  // Scale so the photo covers the frame, times the shot's zoom.
-  function geom(shot, fw, fh){
-    const s = Math.max(fw / shot.w, fh / shot.h) * shot.zoom;
-    return { W: shot.w * s, H: shot.h * s };
+  function announce(msg){ el.announce.textContent = ''; requestAnimationFrame(() => { el.announce.textContent = msg; }); }
+
+  /* ---------- Shots found (kept in this browser only) ---------- */
+  let found = new Set();
+  try { found = new Set(JSON.parse(localStorage.getItem('trackside-found') || '[]')); } catch {}
+  function remember(id){ found.add(id); try { localStorage.setItem('trackside-found', JSON.stringify([...found])); } catch {} }
+  function renderCollect(){
+    el.collect.innerHTML = `<b>Shots found ${found.size}/${ALL_SHOTS.length}</b>` +
+      ALL_SHOTS.map((id) => `<i title="${found.has(id) ? SHOTS[id].text : 'Not found yet'}" data-grade="${found.has(id) ? SHOTS[id].grade : ''}"></i>`).join('');
   }
-  function limits(shot, fw, fh){
-    const { W, H } = geom(shot, fw, fh);
-    return { x0: fw/2/W, x1: 1 - fw/2/W, y0: fh/2/H, y1: 1 - fh/2/H };
-  }
-  // Paint a crop centred on (cx, cy) into a layer that overhangs its frame (for blur edges).
-  function paint(layer, frame, shot, cx, cy, blurFrac){
+
+  /* ---------- Painting a crop ---------- */
+  function paint(layer, frame, shot, blurFrac){
     const fw = frame.clientWidth, fh = frame.clientHeight;
     const pad = (layer.offsetWidth - fw) / 2;
-    const { W, H } = geom(shot, fw, fh);
-    layer.style.backgroundImage = `url("${shot.file}")`;
+    const { w, h } = sizes[shot.img];
+    const s = Math.max(fw / w, fh / h) * shot.zoom, W = w * s, H = h * s;
+    const cx = Math.min(1 - fw/2/W, Math.max(fw/2/W, shot.c[0]));
+    const cy = Math.min(1 - fh/2/H, Math.max(fh/2/H, shot.c[1]));
+    layer.style.backgroundImage = `url("${IMG(shot.img)}")`;
     layer.style.backgroundSize = `${W}px ${H}px`;
     layer.style.backgroundPosition = `${pad + fw/2 - cx*W}px ${pad + fh/2 - cy*H}px`;
     const b = blurFrac * fw;
     layer.style.filter = b > 0.3 ? `blur(${b.toFixed(1)}px)` : 'none';
   }
 
-  /* ---------- Sound (Web Audio, made on the fly) ---------- */
+  /* ---------- Sound (made on the fly) ---------- */
   let ctx = null, soundOn = true;
   function audio(){
     if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { ctx = null; } }
@@ -135,12 +154,12 @@
     src.connect(f).connect(g).connect(a.destination);
     src.start(a.currentTime + at);
   }
-  function shutterSound(){ click(0, 0.04, 2400, 0.9); click(0.07, 0.05, 1500, 0.7); }
+  const shutterSound = (at = 0) => { click(at, 0.04, 2400, 0.9); click(at + 0.06, 0.05, 1500, 0.7); };
   function beep(){
     const a = audio(); if (!a) return;
     [0, 0.09].forEach((t) => {
       const o = a.createOscillator(), g = a.createGain();
-      o.frequency.value = 2200; o.type = 'sine';
+      o.frequency.value = 2200;
       g.gain.setValueAtTime(0.0001, a.currentTime + t);
       g.gain.exponentialRampToValueAtTime(0.12, a.currentTime + t + 0.005);
       g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + t + 0.06);
@@ -148,255 +167,153 @@
     });
   }
 
-  /* ---------- State ---------- */
-  const results = [];        // per shot: { cx, cy, blur, grade }
-  let idx = 0;
-  let mode = 'intro';        // intro | shoot | review | sheet
-  const live = { cx:.5, cy:.5, focus:0, holding:false, locked:false, t:0, keys:new Set() };
+  /* ---------- Navigation ---------- */
+  let path = [];          // node ids from Start to here
+  let shotId = null;
+  let mode = 'ask';
 
-  function announce(msg){ el.announce.textContent = ''; requestAnimationFrame(() => { el.announce.textContent = msg; }); }
-
-  function buildRoll(){
-    el.roll.innerHTML = SHOTS.map((_, i) => `<li data-i="${i}" aria-label="Frame ${i+1}"></li>`).join('');
-  }
-  function updateRoll(){
-    [...el.roll.children].forEach((li, i) => {
-      const r = results[i];
-      li.dataset.state = i === idx && mode === 'shoot' ? 'current' : r ? 'done' : '';
-      if (r) { li.dataset.grade = r.grade; li.style.backgroundImage = `url("${SHOTS[i].file}")`; }
-      else { delete li.dataset.grade; li.style.backgroundImage = ''; }
-    });
-  }
-
-  function startShot(i){
-    idx = i; mode = 'shoot';
-    const s = SHOTS[i];
-    el.vf.style.setProperty('--ar', s.ar || 1.5);
-    el.session.textContent = s.session;
-    el.counter.textContent = `FR ${pad2(i+1)}/${pad2(SHOTS.length)}`;
-    el.title.textContent = s.title;
-    el.brief.textContent = s.brief;
-    el.exp.textContent = s.exp[0]; el.ap.textContent = s.exp[1];
-    el.motionTag.hidden = !s.drift;
-    el.af.style.left = `${s.af[0]*100}%`; el.af.style.top = `${s.af[1]*100}%`;
-    el.hint.textContent = `Focus point: ${afName(s.af)}. ` + (s.drift ? 'The car is moving, so keep dragging with it while you hold.' : 'Drag to frame, then hold the shutter.');
-
-    // Start with the subject off the point so there's framing to do.
-    requestAnimationFrame(() => {
-      const L = limits(s, el.vf.clientWidth, el.vf.clientHeight);
-      const fw = el.vf.clientWidth, fh = el.vf.clientHeight, { W, H } = geom(s, fw, fh);
-      const [ax, ay] = s.af;
-      // Moving cars enter from behind the focus point; still subjects start off to one side.
-      const sx = s.drift ? ax - 0.14 : ax + (ax <= 0.5 ? 0.24 : -0.24);
-      const sy = ay + (s.drift ? 0 : ay <= 0.5 ? 0.16 : -0.16);
-      live.cx = clamp(s.target[0] + (0.5 - sx) * fw / W, L.x0, L.x1);
-      live.cy = clamp(s.target[1] + (0.5 - sy) * fh / H, L.y0, L.y1);
-      live.focus = 0; live.holding = false; live.locked = false;
-    });
-    updateRoll();
-    announce(`Frame ${i+1} of ${SHOTS.length}. ${s.title}. ${s.brief}`);
-    el.vf.focus({ preventScroll:true });
+  function show(screen){
+    ['ask','shoot','result'].forEach((s) => { el[s].hidden = s !== screen; });
+    mode = screen;
     window.scrollTo({ top:0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
-
-  /* ---------- The live loop ---------- */
-  let last = performance.now();
-  function shake(t){ return reduceMotion ? [0,0] : [0.004*Math.sin(t*7.1) + 0.003*Math.sin(t*12.7), 0.004*Math.sin(t*5.3+1) + 0.002*Math.sin(t*15.1)]; }
-
-  function distance(s, cx, cy, fw, fh){
-    const { W, H } = geom(s, fw, fh);
-    const px = fw/2 + (s.target[0] - cx) * W, py = fh/2 + (s.target[1] - cy) * H;   // subject, in frame px
-    return Math.hypot(px - s.af[0] * fw, py - s.af[1] * fh) / fw;
+  function renderCrumbs(extra){
+    const parts = path.map((id) => NODES[id].crumb);
+    if (extra) parts.push(extra);
+    el.crumbs.innerHTML = parts.map((p) => `<span>${p}</span>`).join('');
   }
 
-  function frame(now){
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (mode === 'shoot') {
-      const s = SHOTS[idx];
-      const fw = el.vf.clientWidth, fh = el.vf.clientHeight;
-      const { W, H } = geom(s, fw, fh);
-      const L = limits(s, fw, fh);
-      live.t += dt;
-
-      // Arrow keys pan at a steady rate (frame widths per second).
-      const k = live.keys, step = 0.45 * fw * dt;
-      if (k.has('ArrowLeft')) live.cx -= step / W;
-      if (k.has('ArrowRight')) live.cx += step / W;
-      if (k.has('ArrowUp')) live.cy -= step / H;
-      if (k.has('ArrowDown')) live.cy += step / H;
-
-      // Moving subject: the view keeps sliding off it, unevenly.
-      if (s.drift) live.cx -= s.drift * (1 + 0.35*Math.sin(live.t*2.3)) * fw * dt / W;
-      live.cx = clamp(live.cx, L.x0, L.x1); live.cy = clamp(live.cy, L.y0, L.y1);
-
-      const [sx, sy] = shake(live.t);
-      const vx = live.cx + sx * fw / W, vy = live.cy + sy * fw / H;
-      const d = distance(s, vx, vy, fw, fh);
-      const inPoint = d < 0.085;
-
-      if (live.holding) {
-        if (inPoint) live.focus = Math.min(1, live.focus + dt / 0.55);
-        else live.focus += (0.22 - live.focus) * Math.min(1, dt * (s.drift ? 1.5 : 4));   // lens hunts
-      } else {
-        live.focus = Math.max(0, live.focus - dt / 0.5);
-      }
-      const nowLocked = live.focus >= 0.98;
-      if (nowLocked && !live.locked) beep();
-      live.locked = nowLocked;
-
-      paint(el.vfImg, el.vf, s, vx, vy, (1 - live.focus) * 0.022);
-      el.af.dataset.state = live.locked ? 'lock' : live.holding && !inPoint ? 'hunt' : inPoint ? 'on' : d < 0.18 ? 'near' : 'idle';
-      el.vf.dataset.focus = live.locked ? 'lock' : '';
-      el.vf.dataset.d = d.toFixed(3);   // distance from subject to the focus point (handy for testing)
-      el.meterFill.style.width = `${Math.round(live.focus*100)}%`;
-      el.focusWord.textContent = live.locked ? 'AF ●' : live.holding ? 'AF…' : 'MF';
-      el.shutter.classList.toggle('held', live.holding);
-      el.shutter.classList.toggle('lock', live.locked);
-      live.view = [vx, vy, d];
-    }
-    requestAnimationFrame(frame);
+  function goNode(id, push = true){
+    if (push) path.push(id);
+    const n = NODES[id];
+    el.ask.dataset.start = n.start ? 'true' : 'false';
+    el.askHero.style.backgroundImage = `url("${IMG(n.img)}")`;
+    el.askTag.textContent = n.tag;
+    el.askTitle.textContent = n.title;
+    el.askBody.textContent = n.body;
+    el.askQ.textContent = n.q;
+    el.askOptions.innerHTML = n.options.map((o, i) => o.img
+      ? `<button class="opt" data-i="${i}"><span class="thumb" style="background-image:url('${IMG(o.img)}')"></span><span class="lbl">${o.label}</span></button>`
+      : `<button class="opt yn" data-i="${i}"><span class="lbl">${o.label}</span></button>`).join('');
+    el.back.hidden = path.length <= 1;
+    renderCrumbs();
+    renderCollect();
+    show('ask');
+    announce(`${n.title}. ${n.q}`);
   }
 
-  /* ---------- Firing ---------- */
-  function press(){
-    if (mode !== 'shoot' || live.holding) return;
+  el.askOptions.addEventListener('click', (e) => {
+    const b = e.target.closest('.opt'); if (!b) return;
     audio();
-    live.holding = true;
+    const o = NODES[path[path.length - 1]].options[+b.dataset.i];
+    if (o.to) goNode(o.to); else goShoot(o.shot);
+  });
+  el.back.addEventListener('click', () => { if (path.length > 1) { path.pop(); goNode(path[path.length - 1], false); } });
+
+  /* ---------- Taking the shot ---------- */
+  const live = { focus:0, holding:false, locked:false, firing:false };
+
+  function goShoot(id){
+    shotId = id;
+    const s = SHOTS[id], n = NODES[path[path.length - 1]];
+    el.vf.style.setProperty('--ar', s.ar || 1.5);
+    el.af.style.left = `${s.af[0]*100}%`; el.af.style.top = `${s.af[1]*100}%`;
+    el.shootTag.textContent = n.tag;
+    el.shootBody.textContent = `${n.body} Lens: ${s.cam[2]}.`;
+    [el.roShutter.textContent, el.roAp.textContent, el.roLens.textContent] = s.cam;
+    el.modeTag.hidden = !s.burst;
+    el.hint.textContent = 'Hold the shutter (or Space) until it beeps, then let go.';
+    Object.assign(live, { focus:0, holding:false, locked:false, firing:false });
+    el.shutter.disabled = false;
+    renderCrumbs('Take the shot');
+    show('shoot');
+    announce(`Take the shot. ${s.cam.join(', ')}. Hold the shutter until it beeps, then let go.`);
   }
+
+  let last = performance.now();
+  function tick(now){
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (mode === 'shoot' && !live.firing) {
+      const s = SHOTS[shotId];
+      if (live.holding) live.focus = Math.min(1, live.focus + dt / 0.6);
+      else live.focus = Math.max(0, live.focus - dt / 0.5);
+      const locked = live.focus >= 0.98;
+      if (locked && !live.locked) beep();
+      live.locked = locked;
+      paint(el.vfImg, el.vf, s, (1 - live.focus) * 0.02);
+      el.af.dataset.state = locked ? 'lock' : live.holding ? 'hunt' : 'idle';
+      el.vf.dataset.focus = locked ? 'lock' : '';
+      el.meterFill.style.width = `${Math.round(live.focus * 100)}%`;
+      el.focusWord.textContent = locked ? 'AF ●' : live.holding ? 'AF…' : 'MF';
+      el.shutter.classList.toggle('held', live.holding);
+      el.shutter.classList.toggle('lock', locked);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function press(){ if (mode === 'shoot' && !live.firing) { audio(); live.holding = true; } }
   function release(){
-    if (mode !== 'shoot' || !live.holding) return;
+    if (mode !== 'shoot' || !live.holding || live.firing) return;
     live.holding = false;
-    const [vx, vy, d] = live.view || [live.cx, live.cy, 1];
-    const f = live.focus;
-    const grade = f >= 0.95 && d < 0.085 ? 'keeper'
-                : f >= 0.95 && d < 0.15 ? 'usable'
-                : f >= 0.45 ? 'soft' : 'missed';
-    results[idx] = { cx:vx, cy:vy, blur:(1 - f) * 0.022, grade };
-    mode = 'review';
-    shutterSound();
-    el.flash.classList.remove('on'); void el.flash.offsetWidth; el.flash.classList.add('on');
-    updateRoll();
-    setTimeout(() => showPrint(idx, true), reduceMotion ? 0 : 320);
+    if (!live.locked) { el.hint.textContent = 'Too early. Keep holding until you hear the beep.'; return; }
+    live.firing = true; el.shutter.disabled = true;
+    const s = SHOTS[shotId], n = s.burst ? 4 : 1, gap = 0.11;
+    for (let i = 0; i < n; i++) {
+      shutterSound(i * gap);
+      setTimeout(() => { el.flash.classList.remove('on'); void el.flash.offsetWidth; el.flash.classList.add('on'); }, i * gap * 1000);
+    }
+    setTimeout(showResult, (n * gap + 0.35) * 1000);
   }
-
-  function showPrint(i, afterShot){
-    const s = SHOTS[i], r = results[i];
-    el.print.style.setProperty('--ar', s.ar || 1.5);
-    el.printNo.textContent = `FR ${pad2(i+1)} · ${s.session}`;
-    el.printStamp.dataset.grade = r.grade;
-    el.printStamp.textContent = GRADE_WORD[r.grade];
-    el.printTitle.textContent = s.title;
-    el.printNote.textContent = r.grade === 'soft' && s.drift ? NOTES.softMotion : NOTES[r.grade];
-    el.printLabel.textContent = s.label;
-    el.printText.textContent = s.text;
-    el.reshoot.hidden = !afterShot;
-    el.next.textContent = afterShot ? (i === SHOTS.length - 1 ? 'See the contact sheet' : 'Next frame') : 'Close';
-    el.print.dataset.after = afterShot ? '1' : '';
-    el.print.showModal();
-    paint(el.printImg, el.printImg.parentElement, s, r.cx, r.cy, r.blur);
-    announce(`${GRADE_WORD[r.grade]}. ${el.printNote.textContent}`);
-    el.next.focus();
-  }
-
-  el.next.addEventListener('click', () => {
-    const after = el.print.dataset.after === '1';
-    el.print.close();
-    if (!after) return;
-    if (idx < SHOTS.length - 1) startShot(idx + 1); else showSheet();
-  });
-  el.reshoot.addEventListener('click', () => { el.print.close(); results[idx] = undefined; startShot(idx); });
-  el.print.addEventListener('cancel', (e) => { if (el.print.dataset.after === '1') e.preventDefault(); });
-
-  /* ---------- Contact sheet ---------- */
-  function showSheet(){
-    mode = 'sheet';
-    el.shoot.hidden = true; el.sheet.hidden = false;
-    const keepers = results.filter((r) => r.grade === 'keeper').length;
-    const usable = results.filter((r) => r.grade === 'usable').length;
-    el.tally.textContent = `${keepers} keeper${keepers === 1 ? '' : 's'} and ${usable} usable out of ${SHOTS.length} frames. Tap a frame to see the print.`;
-    el.contact.innerHTML = SHOTS.map((s, i) => `
-      <li>
-        <button data-i="${i}" aria-label="Frame ${i+1}: ${s.title}, ${GRADE_WORD[results[i].grade]}">
-          <span class="tb" style="position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);height:100%;aspect-ratio:${s.ar || 1.5};overflow:hidden"><span class="t"></span></span>
-        </button>
-        <span class="cap"><b>${pad2(i+1)}</b><span data-grade="${results[i].grade}">${GRADE_WORD[results[i].grade]}</span></span>
-      </li>`).join('');
-    requestAnimationFrame(() => {
-      el.contact.querySelectorAll('button').forEach((b) => {
-        const i = +b.dataset.i, r = results[i];
-        paint(b.querySelector('.t'), b.querySelector('.tb'), SHOTS[i], r.cx, r.cy, r.blur);
-      });
-    });
-    window.scrollTo({ top:0 });
-    el.sheet.querySelector('h2').focus?.();
-    announce(el.tally.textContent);
-  }
-  el.contact.addEventListener('click', (e) => {
-    const b = e.target.closest('button'); if (b) showPrint(+b.dataset.i, false);
-  });
-  el.again.addEventListener('click', () => {
-    results.length = 0;
-    el.sheet.hidden = true; el.shoot.hidden = false;
-    startShot(0);
-  });
-
-  /* ---------- Input ---------- */
-  let drag = null;
-  el.vf.addEventListener('pointerdown', (e) => {
-    if (mode !== 'shoot') return;
-    drag = { id:e.pointerId, x:e.clientX, y:e.clientY };
-    el.vf.setPointerCapture(e.pointerId); el.vf.classList.add('dragging');
-  });
-  el.vf.addEventListener('pointermove', (e) => {
-    if (!drag || e.pointerId !== drag.id || mode !== 'shoot') return;
-    const s = SHOTS[idx], { W, H } = geom(s, el.vf.clientWidth, el.vf.clientHeight);
-    live.cx -= (e.clientX - drag.x) / W; live.cy -= (e.clientY - drag.y) / H;
-    drag.x = e.clientX; drag.y = e.clientY;
-  });
-  const endDrag = (e) => { if (drag && e.pointerId === drag.id) { drag = null; el.vf.classList.remove('dragging'); } };
-  el.vf.addEventListener('pointerup', endDrag);
-  el.vf.addEventListener('pointercancel', endDrag);
 
   el.shutter.addEventListener('pointerdown', (e) => { e.preventDefault(); el.shutter.setPointerCapture(e.pointerId); press(); });
   el.shutter.addEventListener('pointerup', release);
-  el.shutter.addEventListener('pointercancel', release);
+  el.shutter.addEventListener('pointercancel', () => { live.holding = false; });
   el.shutter.addEventListener('contextmenu', (e) => e.preventDefault());
-
-  const ARROWS = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
   document.addEventListener('keydown', (e) => {
-    if (mode !== 'shoot' || el.print.open) return;
-    if (ARROWS.includes(e.key)) { e.preventDefault(); live.keys.add(e.key); }
-    else if ((e.key === ' ' || e.key === 'Enter') && e.target !== el.sound) { e.preventDefault(); if (!e.repeat) press(); }
+    if (mode === 'shoot' && (e.key === ' ' || e.key === 'Enter') && e.target !== el.sound) { e.preventDefault(); if (!e.repeat) press(); }
   });
   document.addEventListener('keyup', (e) => {
-    if (ARROWS.includes(e.key)) live.keys.delete(e.key);
-    else if ((e.key === ' ' || e.key === 'Enter') && e.target !== el.sound) { e.preventDefault(); release(); }
+    if (mode === 'shoot' && (e.key === ' ' || e.key === 'Enter') && e.target !== el.sound) { e.preventDefault(); release(); }
   });
-  window.addEventListener('blur', () => { live.keys.clear(); if (live.holding) live.holding = false; });
-
+  window.addEventListener('blur', () => { live.holding = false; });
   el.sound.addEventListener('click', () => {
     soundOn = !soundOn;
     el.sound.setAttribute('aria-pressed', String(soundOn));
     el.sound.textContent = soundOn ? 'Sound on' : 'Sound off';
   });
 
-  el.begin.addEventListener('click', () => {
-    audio();
-    el.intro.hidden = true; el.shoot.hidden = false;
-    startShot(0);
-  });
+  /* ---------- Result ---------- */
+  function showResult(){
+    const s = SHOTS[shotId];
+    remember(shotId);
+    el.printFrame.style.setProperty('--ar', s.ar || 1.5);
+    el.resStamp.dataset.grade = s.grade;
+    el.resStamp.textContent = s.grade === 'great' ? 'Great shot' : 'Weak shot';
+    el.resTitle.textContent = s.grade === 'great' ? 'Great shot' : 'Weak shot';
+    el.resText.textContent = s.text;
+    el.resAction.textContent = s.action;
+    el.resPath.textContent = path.slice(1).map((id) => NODES[id].crumb).join(' › ') + ` · ${s.cam[2]}`;
+    renderCrumbs(s.grade === 'great' ? 'Great shot' : 'Weak shot');
+    show('result');
+    requestAnimationFrame(() => {
+      paint(el.printImg, el.printFrame, s, 0);
+      // a weak shot prints a little flat
+      if (s.grade === 'weak') el.printImg.style.filter = 'saturate(.75) contrast(.92)';
+    });
+    announce(`${el.resTitle.textContent}. ${s.text}`);
+    el.resAction.focus({ preventScroll:true });
+  }
+  el.resAction.addEventListener('click', () => { path = []; goNode('start'); });
 
-  /* ---------- Load the roll ---------- */
+  /* ---------- Load ---------- */
   // Read each photo's real size, so higher-resolution exports can be dropped in with the same names.
-  Promise.all(SHOTS.map((s) => new Promise((res) => {
+  Promise.all(Array.from({ length:10 }, (_, i) => new Promise((res) => {
     const im = new Image();
-    im.onload = () => { s.w = im.naturalWidth; s.h = im.naturalHeight; res(); };
-    im.onerror = () => { s.w = 1500; s.h = 1000; res(); };
-    im.src = s.file;
+    im.onload = () => { sizes[i + 1] = { w:im.naturalWidth, h:im.naturalHeight }; res(); };
+    im.onerror = () => { sizes[i + 1] = { w:1500, h:1000 }; res(); };
+    im.src = IMG(i + 1);
   }))).then(() => {
-    buildRoll();
-    el.begin.disabled = false;
-    el.begin.textContent = 'Load the roll';
-    requestAnimationFrame(frame);
+    goNode('start');
+    requestAnimationFrame(tick);
   });
 })();

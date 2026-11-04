@@ -9,15 +9,17 @@ Codebase for my sequential interaction project in IXD 107-03, working with Claud
 
 ## Trackside: a motorsports photographer experience
 
-Built from the Week 7 Figma board (*Motorsports Photographer*). You shoot one race weekend as ten frames, in order: arrival (01–03), pit lane (04–05), trackside (06–09), podium (10).
+Follows the Week 7 Figma flow (*Motorsports Photographer*). It's a branching sequence: every choice leads to a Great shot or a Weak shot, and each result's button returns to the start.
 
-Each frame is the same three-beat interaction:
+- **Start**: You're a race photographer. What moment do you want to capture?
+  - **Trackside**: What type of settings do I need?
+    - **Panning shot**: slower shutter, track smoothly. Telephoto lens? Yes = Great shot, No = Weak shot (the car is a tiny dot).
+    - **Sharp action shot**: faster shutter, burst mode. Telephoto lens? Yes = Great shot, No = Weak shot.
+  - **Possible Podium**: Who should I focus on?
+    - **The Team**: fast shutter, burst mode. Can you fit the whole team? Yes = Great shot (they want to hire you), No = Weak shot (team cropped out).
+    - **Driver**: shorter lens, smaller f-stop. Right settings and lens? Yes = Great shot (used for advertising worldwide), No = Weak shot (busy background).
 
-1. **Frame** (drag, or arrow keys): pan the viewfinder until the subject sits in the focus box.
-2. **Focus** (hold the shutter, or Space): the image sharpens only while the subject stays in the box. A double beep means focus is locked.
-3. **Shoot** (release): the frame is developed as a print with a grade (Keeper, Usable, Soft, Missed), the photo's title and its Context / Theme note from Figma. You can reshoot or move on.
-
-Moving-car frames (02, 06, 07, 08) drift, so you have to keep panning with the car while you focus. The weekend ends on a contact sheet of the ten frames as you framed them.
+Between the last answer and the result you take the shot: the viewfinder shows the framing your lens choice gives you, with the settings in the readout. Hold the shutter (or Space) until it beeps, then let go. Burst-mode paths fire four frames. The start screen counts how many of the 8 shots you've found (saved in this browser).
 
 Files: `docs/photographer/index.html`, `style.css`, `app.js`, and `img/01.jpg` to `img/10.jpg`. The photos were cut from a screenshot of the Figma board, so they're low resolution. To sharpen them, export the originals from Figma and save them over `img/01.jpg` … `img/10.jpg` with the same names (any size works; the code reads each image's real size).
 
