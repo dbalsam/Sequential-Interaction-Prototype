@@ -123,6 +123,10 @@ h1,h2{font-size:clamp(26px,6vw,38px);line-height:1.08;margin:0 0 8px;letter-spac
 .release[data-stage="half"] .cap{transform:translateY(2px);box-shadow:0 2px 0 #2a2a2d,0 3px 6px rgba(0,0,0,.6)}
 .release[data-stage="full"] .cap{transform:translateY(4px);box-shadow:0 0 0 #2a2a2d,0 1px 2px rgba(0,0,0,.6)}
 .release:disabled{opacity:1}
+/* Glow while waiting for the press, so the shutter reads as the thing to tap. Steady glow under reduced motion. */
+.release[data-stage="idle"]{box-shadow:inset 0 0 0 5px #0b0b0c,0 3px 6px rgba(0,0,0,.6),0 0 0 3px rgba(255,176,0,.55),0 0 22px 6px rgba(255,176,0,.45);
+  animation:shutterglow 1.6s ease-in-out infinite}
+@keyframes shutterglow{50%{box-shadow:inset 0 0 0 5px #0b0b0c,0 3px 6px rgba(0,0,0,.6),0 0 0 4px rgba(255,176,0,.9),0 0 34px 12px rgba(255,176,0,.7)}}
 .hint{margin:14px 0 0;color:var(--fg);font-size:15px;text-align:center;min-height:1.4em}
 .keys{margin-top:10px}
 .legend{color:var(--mid);font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
