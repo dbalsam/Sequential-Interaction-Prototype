@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trackside</title>
+<meta name="description" content="A motorsports photographer experience: ten frames across one race weekend. Frame the subject, hold to focus, release to shoot.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+  <!-- Screen 1: the credential -->
+  <section class="screen" id="intro" aria-labelledby="introTitle">
+    <div class="pass">
+      <div class="pass-top">
+        <span class="pass-kind">Media · Photo</span>
+        <span class="pass-no">No. 270</span>
+      </div>
+      <h1 id="introTitle">Trackside</h1>
+      <p class="lede">Race day, through the lens.</p>
+      <p>You're shooting the weekend for the team. Ten frames on the roll, in order: arrival, pit lane, trackside, podium. Each one has a brief.</p>
+      <ol class="how">
+        <li><b>Frame</b> Drag the viewfinder (or use the arrow keys) until the subject sits in the focus point.</li>
+        <li><b>Focus</b> Press and hold the shutter (or Space). The image sharpens while the subject stays in the point.</li>
+        <li><b>Shoot</b> Let go to fire. Moving cars drift, so pan with them.</li>
+      </ol>
+      <button class="solid" id="begin" disabled>Loading the roll…</button>
+    </div>
+  </section>
+
+  <!-- Screen 2: shooting -->
+  <section class="screen" id="shoot" hidden aria-labelledby="shotTitle">
+    <header class="shot-head">
+      <ol class="roll" id="roll" aria-label="Frames on the roll"></ol>
+      <div class="row">
+        <span class="session" id="session">Arrival</span>
+        <span class="counter" id="counter">FR 01/10</span>
+      </div>
+      <h2 id="shotTitle">Race field approaching the pit straight</h2>
+      <p class="brief" id="brief"></p>
+    </header>
+
+    <div class="vf-wrap">
+      <div class="vf" id="vf" tabindex="0" role="application" aria-label="Viewfinder. Drag or use arrow keys to frame. Hold Space to focus, release to shoot." aria-describedby="brief">
+        <div class="vf-img" id="vfImg"></div>
+        <div class="grain" aria-hidden="true"></div>
+        <div class="thirds" aria-hidden="true"></div>
+        <div class="corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="af" id="af" data-state="idle" aria-hidden="true"></div>
+        <div class="motion-tag" id="motionTag" hidden>Pan with the car</div>
+        <div class="readout" aria-hidden="true">
+          <span id="exp">1/1000</span><span id="ap">f/2.8</span><span>ISO 200</span>
+          <span class="meter"><span id="meterFill"></span></span>
+          <span id="focusWord">MF</span>
+        </div>
+        <div class="flash" id="flash" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <p class="hint" id="hint">Drag to frame. Hold the shutter to focus.</p>
+      <button class="shutter" id="shutter" aria-label="Shutter. Hold to focus, release to shoot."><span></span></button>
+      <button class="ghost small" id="sound" aria-pressed="true">Sound on</button>
+    </div>
+    <p class="sr-only" id="announce" aria-live="polite"></p>
+  </section>
+
+  <!-- Screen 3: contact sheet -->
+  <section class="screen" id="sheet" hidden aria-labelledby="sheetTitle">
+    <header class="sheet-head">
+      <span class="session">Contact sheet</span>
+      <h2 id="sheetTitle">The weekend, as you shot it</h2>
+      <p class="brief" id="tally"></p>
+    </header>
+    <ol class="contact" id="contact"></ol>
+    <div class="row end">
+      <button class="solid" id="again">Shoot the weekend again</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- The developed frame, shown after every shot and from the contact sheet -->
+<dialog class="print" id="print" aria-labelledby="printTitle">
+  <div class="print-frame"><div class="print-img" id="printImg"></div></div>
+  <div class="print-body">
+    <div class="row">
+      <span class="counter" id="printNo">FR 01</span>
+      <span class="stamp" id="printStamp" data-grade="keeper">Keeper</span>
+    </div>
+    <h3 id="printTitle"></h3>
+    <p class="note" id="printNote"></p>
+    <p class="theme"><b id="printLabel">Context</b> <span id="printText"></span></p>
+    <div class="row end">
+      <button class="ghost" id="reshoot">Reshoot</button>
+      <button class="solid" id="next">Next frame</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
