@@ -171,15 +171,18 @@
 
   /* ---------- Live photos ----------
      A canvas over certain photos brings one thing in them to life:
-     the champagne bottles tilt and spray, and the confetti keeps falling.
-     Bottle outlines and pivots are fractions of the photo's width and height. */
+     champagne drips down the bottles and sprays from the necks, and the confetti keeps falling.
+     Positions are fractions of the photo's width and height. */
+  // Bottles stay exactly as photographed. Champagne beads run down the glass from `top` toward
+  // `low` (the lowest point of the bottle), then drip off; `mouth` sprays in pulses.
   const FX = {
     'podium-champagne': { bottles:[
-      { poly:[[0.328,0.435],[0.362,0.450],[0.472,0.647],[0.438,0.713],[0.375,0.698],[0.338,0.563],[0.320,0.478]], pivot:[0.335,0.435], amp:5, speed:2.4, phase:0,   patch:[0.11,0],  mouth:[0.304,0.355], spray:[-0.35,-1] },
-      { poly:[[0.606,0.492],[0.632,0.478],[0.603,0.619],[0.557,0.773],[0.505,0.777],[0.482,0.724],[0.525,0.600]], pivot:[0.619,0.484], amp:5, speed:2.1, phase:1.7, patch:[-0.1,0],  mouth:[0.634,0.411], spray:[0.25,-1] },
+      { top:[0.343,0.469], low:[0.440,0.709], across:0.016, rate:1.6, mouth:[0.304,0.355], spray:[-0.35,-1], phase:0 },
+      { top:[0.615,0.503], low:[0.515,0.769], across:0.016, rate:1.6, mouth:[0.634,0.411], spray:[0.25,-1], phase:1.7 },
     ] },
     'driver-champagne': { bottles:[
-      { poly:[[0.537,0.178],[0.588,0.103],[0.625,0.034],[0.652,0.015],[0.665,0.084],[0.632,0.161],[0.578,0.218],[0.555,0.229]], pivot:[0.494,0.263], amp:2, speed:1.1, phase:0, patch:[-0.12,0] },
+      { top:[0.625,0.084], low:[0.550,0.221], across:0.01, rate:1.2 },
+      { top:[0.490,0.263], low:[0.482,0.285], across:0.005, rate:0.8 },   // a few drops escaping at his lips
     ] },
     'team-confetti': { confetti:true },
   };
@@ -242,40 +245,65 @@
       return;
     }
 
-    const g = f.geo(), im = photo(f.name);
-    if (!g || !im) return;
+    const g = f.geo();
+    if (!g) return;
     const P = ([x, y]) => [g.ox + x * g.W, g.oy + y * g.H];
-    const path = (poly) => { ctx.beginPath(); poly.forEach((pt, i) => { const [x, y] = P(pt); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); };
-    for (const b of f.spec.bottles) {
-      // 1. paper over the bottle with nearby background, so the moving bottle leaves no ghost
-      ctx.save(); path(b.poly); ctx.clip(); ctx.filter = 'blur(6px)';
-      ctx.drawImage(im, g.ox + b.patch[0] * g.W, g.oy + b.patch[1] * g.H, g.W, g.H);
-      ctx.restore();
-      // 2. the bottle itself, tilting around the hand that holds it
-      const a = (b.amp * Math.PI / 180) * (Math.sin(f.t * b.speed + b.phase) + 0.35 * Math.sin(f.t * b.speed * 2.7));
-      const [px, py] = P(b.pivot);
-      ctx.save(); ctx.translate(px, py); ctx.rotate(a); ctx.translate(-px, -py);
-      path(b.poly); ctx.clip(); ctx.drawImage(im, g.ox, g.oy, g.W, g.H);
-      ctx.restore();
-      // 3. champagne spraying out of the neck, in pulses as the bottle is shaken
-      if (b.mouth) {
-        const [mx, my] = P(b.mouth), k = g.W / 800;
-        const rate = 160 * (0.4 + 0.6 * Math.max(0, Math.sin(f.t * b.speed * 1.3 + b.phase)));
-        for (let i = 0; i < rate * dt; i++) {
-          const ang = Math.atan2(b.spray[1], b.spray[0]) + a + (Math.random() - 0.5) * 0.7;
-          const sp = (140 + Math.random() * 220) * k;
-          f.drops.push({ x:mx, y:my, vx:Math.cos(ang) * sp, vy:Math.sin(ang) * sp, life:0, max:0.5 + Math.random() * 0.6, r:(0.8 + Math.random() * 1.8) * Math.max(0.6, k) });
-        }
-        ctx.fillStyle = '#fffaf0';
-        f.drops = f.drops.filter((d) => {
-          d.life += dt; d.vy += 420 * k * dt; d.x += d.vx * dt; d.y += d.vy * dt;
-          if (d.life > d.max) return false;
-          ctx.globalAlpha = 0.85 * (1 - d.life / d.max);
-          ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
-          return true;
-        });
-        ctx.globalAlpha = 1;
+    const k = g.W / 800;
+    f.spec.bottles.forEach((b, bi) => {
+      // 1. beads of champagne sliding down the glass
+      if (Math.random() < b.rate * dt) {
+        const u = Math.random() * 0.35;                       // start somewhere on the upper part
+        f.drops.push({ kind:'bead', b:bi, u, off:(Math.random() - 0.5) * 2 * b.across, v:0.1 + Math.random() * 0.12, r:(0.9 + Math.random() * 1.1) * Math.max(0.7, k) });
       }
+      // 2. spray from the neck, in pulses as the bottle is shaken
+      if (b.mouth) {
+        const [mx, my] = P(b.mouth);
+        const rate = 150 * (0.35 + 0.65 * Math.max(0, Math.sin(f.t * 2.2 + b.phase)));
+        for (let i = 0; i < rate * dt; i++) {
+          const ang = Math.atan2(b.spray[1], b.spray[0]) + (Math.random() - 0.5) * 0.6;
+          const sp = (140 + Math.random() * 220) * k;
+          f.drops.push({ kind:'spray', x:mx, y:my, vx:Math.cos(ang) * sp, vy:Math.sin(ang) * sp, life:0, max:0.5 + Math.random() * 0.6, r:(0.8 + Math.random() * 1.6) * Math.max(0.6, k) });
+        }
+      }
+    });
+    f.drops = f.drops.filter((d) => {
+      if (d.kind === 'bead') {
+        const b = f.spec.bottles[d.b];
+        d.v += 0.25 * dt; d.u += d.v * dt;                     // gravity pulls it faster as it runs
+        const [tx, ty] = P(b.top), [lx, ly] = P(b.low);
+        const dx = lx - tx, dy = ly - ty, len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len, ny = dx / len, off = d.off * g.W;
+        if (d.u >= 1) {                                      // reached the bottom: it drips off
+          Object.assign(d, { kind:'drip', x:lx + nx * off, y:ly + ny * off, vx:0, vy:30 * k, life:0, max:1.2 });
+        } else {
+          const x = tx + dx * d.u + nx * off, y = ty + dy * d.u + ny * off;
+          // the wet trail it leaves behind on the glass
+          const tl = Math.min(d.u, 0.12);
+          const grad = ctx.createLinearGradient(x - dx * tl, y - dy * tl, x, y);
+          grad.addColorStop(0, 'rgba(255,248,225,0)'); grad.addColorStop(1, 'rgba(255,248,225,.28)');
+          ctx.strokeStyle = grad; ctx.lineWidth = d.r * 0.9; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(x - dx * tl, y - dy * tl); ctx.lineTo(x, y); ctx.stroke();
+          bead(x, y, d.r, Math.atan2(dy, dx), 1.5);
+          return true;
+        }
+      }
+      d.life += dt; d.vy += (d.kind === 'drip' ? 900 : 420) * k * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+      if (d.life > d.max || d.y > ctx.canvas.height) return false;
+      if (d.kind === 'drip') bead(d.x, d.y, d.r || 2 * k, Math.PI / 2, 1.5 + Math.min(1.5, d.vy / (600 * k)));
+      else { ctx.globalAlpha = 0.85 * (1 - d.life / d.max); ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+      return true;
+    });
+
+    // A glossy drop of champagne: pale gold body, dark rim, bright highlight; stretched along its motion.
+    function bead(x, y, r, dir, stretch){
+      ctx.save(); ctx.translate(x, y); ctx.rotate(dir);
+      ctx.scale(stretch, 1);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,244,215,.22)'; ctx.fill();
+      ctx.lineWidth = Math.max(0.5, r * 0.25); ctx.strokeStyle = 'rgba(255,250,235,.35)'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(r * 0.25, -r * 0.3, r * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fill();
+      ctx.restore();
     }
   }
   function newPiece(w, h, anywhere){
